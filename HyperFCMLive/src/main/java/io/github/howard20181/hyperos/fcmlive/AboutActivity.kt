@@ -639,6 +639,7 @@ class AboutActivity : Activity() {
         val tipView = TextView(this)
         val palette = ThemeEngine.palette(this)
         tipView.text = text
+        A11yUtils.markTooltip(tipView, text)
         tipView.setTextColor(palette.tooltipText)
         tipView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
         tipView.background = ThemeSupport.cardBackground(this, palette.tooltipBg, 4f)

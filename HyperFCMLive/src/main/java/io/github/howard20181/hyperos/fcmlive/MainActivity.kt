@@ -386,6 +386,7 @@ class MainActivity : Activity(), SearchView.OnQueryTextListener {
 
         val tipView = TextView(this)
         tipView.text = text
+        A11yUtils.markTooltip(tipView, text)
         val tooltipPalette = ThemeEngine.palette(this)
         tipView.setTextColor(tooltipPalette.tooltipText)
         tipView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
@@ -997,6 +998,7 @@ class MainActivity : Activity(), SearchView.OnQueryTextListener {
         dismissActiveTooltip()
         dismissOverflowMenu()
         val content = layoutInflater.inflate(R.layout.popup_overflow, null)
+        A11yUtils.announceWindowOpened(content, getString(R.string.more_menu))
         val sysCheck = content.findViewById<ImageView>(R.id.menu_show_system_check)
         val fcmCheck = content.findViewById<ImageView>(R.id.menu_show_fcm_check)
         val mipushCheck = content.findViewById<ImageView>(R.id.menu_exclude_mipush_check)
@@ -1005,6 +1007,10 @@ class MainActivity : Activity(), SearchView.OnQueryTextListener {
         bindMd3Check(fcmCheck, showFcmSupportedOnly)
         bindMd3Check(mipushCheck, excludeMiPushApps)
         bindMd3Check(strictCheck, strictMode)
+        A11yUtils.markDecorative(sysCheck)
+        A11yUtils.markDecorative(fcmCheck)
+        A11yUtils.markDecorative(mipushCheck)
+        A11yUtils.markDecorative(strictCheck)
 
         // Line the check boxes up on one vertical line. Each row lays out as
         // [label][12dp][check box], so a wrap_content label parks its check box
@@ -1052,6 +1058,28 @@ class MainActivity : Activity(), SearchView.OnQueryTextListener {
         popup.isOutsideTouchable = true
         popup.isFocusable = true
         popup.isTouchable = true
+
+        // TalkBack: one stop per row with explicit checked state.
+        A11yUtils.applyMenuRow(
+            content.findViewById(R.id.menu_show_system),
+            getString(R.string.show_system_apps),
+            showSystemApps
+        )
+        A11yUtils.applyMenuRow(
+            content.findViewById(R.id.menu_show_fcm),
+            getString(R.string.show_fcm_supported_apps),
+            showFcmSupportedOnly
+        )
+        A11yUtils.applyMenuRow(
+            content.findViewById(R.id.menu_exclude_mipush),
+            getString(R.string.exclude_mipush_apps),
+            excludeMiPushApps
+        )
+        A11yUtils.applyMenuRow(
+            content.findViewById(R.id.menu_strict_mode),
+            getString(R.string.strict_mode),
+            strictMode
+        )
 
         // Measure wrap_content only — NEVER force a fixed width.
         // Width = padding + longest(label + 12dp + checkbox); no right void,
