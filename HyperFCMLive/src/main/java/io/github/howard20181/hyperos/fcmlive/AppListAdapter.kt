@@ -372,8 +372,8 @@ class AppListAdapter(
     }
 
     companion object {
-        /** Row corner radius in dp; matches bg_card / bg_card_selected. */
-        private const val CARD_RADIUS_DP = 24f
+        /** Row corner radius: M3 ExtraLarge (shape_corner_extra_large). */
+        private const val CARD_RADIUS_DP = 28f
 
         /** Row icon size in dp; matches `@+id/app_icon` in item_app.xml. */
         private const val ICON_SIZE_DP = 44

@@ -1198,7 +1198,9 @@ class AboutActivity : Activity() {
         private const val EGG_WINDOW_MS = 2000L
         private const val EGG_COOLDOWN_MS = 10000L
 
+        /** M3 Large — @dimen/shape_corner_large */
         private const val MENU_CONTAINER_RADIUS_DP = 16
+        /** M3 Medium — @dimen/shape_corner_medium */
         private const val MENU_ITEM_RADIUS_DP = 12
         private const val MENU_OUTER_PAD_DP = 6
         private const val MENU_ITEM_GAP_DP = 10
