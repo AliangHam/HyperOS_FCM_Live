@@ -18,6 +18,7 @@ import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.TextView
+import com.google.android.material.card.MaterialCardView
 import io.github.howard20181.hyperos.fcmlive.theme.AppPalette
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
@@ -159,10 +160,10 @@ class AppListAdapter(
         clearIconTooltip(holder.status)
 
         val selected = multiSelectMode && selectedPkgs.contains(app.packageName)
-        // Fresh mutate() instance per bind — never share a RippleDrawable across
-        // recycled rows (that paints the press ripple on the wrong bounds).
-        convertView!!.background = newSolidCardBg(selected)
-        ensurePressRipple(convertView)
+        // MaterialCardView owns its fill + ripple; only the color changes on selection.
+        (convertView as? MaterialCardView)?.setCardBackgroundColor(
+            if (selected) cardSelectedColor else cardColor
+        )
 
         val pkg = app.packageName
         convertView.setOnClickListener { v ->
@@ -189,26 +190,11 @@ class AppListAdapter(
         return convertView
     }
 
-    private fun newSolidCardBg(selected: Boolean): Drawable {
-        return ThemeSupport.cardBackground(
-            context,
-            if (selected) cardSelectedColor else cardColor, CARD_RADIUS_DP
-        )
-    }
 
     /**
      * Row press ripple lives on foreground (inflated per item view). Background
      * stays a solid shape so multi-select can swap colors without ripple state bugs.
      */
-    private fun ensurePressRipple(row: View?) {
-        if (row == null || row.foreground != null) {
-            return
-        }
-        val mask = GradientDrawable()
-        mask.setColor(Color.WHITE)
-        mask.cornerRadius = CARD_RADIUS_DP * density
-        row.foreground = RippleDrawable(ColorStateList.valueOf(rippleColor), null, mask)
-    }
 
     private fun findByPackage(packageName: String?): AppEntry? {
         if (packageName == null) {

@@ -1,7 +1,7 @@
 package io.github.howard20181.hyperos.fcmlive
 
 import android.app.Activity
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -45,6 +45,7 @@ import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import io.github.howard20181.hyperos.fcmlive.mcu.Hct
 import io.github.howard20181.hyperos.fcmlive.mcu.Scheme
+import com.google.android.material.materialswitch.MaterialSwitch
 import io.github.howard20181.hyperos.fcmlive.theme.AppPalette
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemePrefs
@@ -63,9 +64,9 @@ class AboutActivity : Activity() {
     private val eggTaps = ArrayList<Long>(EGG_TAP_COUNT)
     private var lastEggAtMs: Long = 0
     private var hideIconState: TextView? = null
-    private var hideIconSwitch: MdSwitch? = null
+    private var hideIconSwitch: MaterialSwitch? = null
     private var dynamicColorState: TextView? = null
-    private var dynamicColorSwitch: MdSwitch? = null
+    private var dynamicColorSwitch: MaterialSwitch? = null
     private var dynamicColorSwatches: ViewGroup? = null
     private var themeModeValue: TextView? = null
     private var paletteStyleValue: TextView? = null
@@ -183,7 +184,7 @@ class AboutActivity : Activity() {
                         ).show()
                         return@runOnUiThread
                     }
-                    AlertDialog.Builder(this@AboutActivity)
+                    MaterialAlertDialogBuilder(this@AboutActivity)
                         .setMessage(getString(R.string.update_found, latestVersion))
                         .setPositiveButton(R.string.update_open) { _, _ ->
                             UpdateChecker.clearBadge(this@AboutActivity)
@@ -235,7 +236,10 @@ class AboutActivity : Activity() {
         hideIconSwitch = findViewById(R.id.hide_icon_switch)
         val hideRow = findViewById<View>(R.id.row_hide_icon)
         hideRow?.setOnClickListener(rowClick {
-            hideIconSwitch?.let { it.setCheckedImmediate(!it.isChecked) }
+            hideIconSwitch?.let {
+                it.isChecked = !it.isChecked
+                it.jumpDrawablesToCurrentState()
+            }
         })
         val switchView = hideIconSwitch ?: return
         val palette = ThemeEngine.palette(this)
@@ -245,7 +249,8 @@ class AboutActivity : Activity() {
         // it never fires a spurious write, and so a screen rebuild cannot
         // leave a half-slid thumb behind: a slide we start here would be
         // aborted by the very next frame.
-        switchView.setCheckedImmediate(LauncherIcon.isHidden(this))
+        switchView.isChecked = LauncherIcon.isHidden(this)
+        switchView.jumpDrawablesToCurrentState()
         switchView.setOnCheckedChangeListener { _, checked -> applyLauncherIcon(checked) }
     }
 
@@ -262,7 +267,10 @@ class AboutActivity : Activity() {
         row?.setOnClickListener(rowClick {
             // Same reasoning as the listener below: the state change
             // rebuilds the screen, so jump straight to the new state.
-            dynamicColorSwitch?.setCheckedImmediate(!(dynamicColorSwitch?.isChecked ?: false))
+            dynamicColorSwitch?.let {
+                it.isChecked = !it.isChecked
+                it.jumpDrawablesToCurrentState()
+            }
         })
         val switchView = dynamicColorSwitch ?: return
         switchView.applyPalette(ThemeEngine.palette(this))
@@ -270,7 +278,8 @@ class AboutActivity : Activity() {
         // Restore before the listener attaches, so no spurious write fires —
         // and without a slide, because this view is rebuilt on every theme
         // change (see setCheckedImmediate).
-        switchView.setCheckedImmediate(dynamic)
+        switchView.isChecked = dynamic
+        switchView.jumpDrawablesToCurrentState()
         switchView.setOnCheckedChangeListener { _, checked ->
             ThemePrefs.setDynamicColor(this, checked)
             // Flipping this switch rebuilds the whole screen in the same frame
@@ -278,7 +287,8 @@ class AboutActivity : Activity() {
             // slide therefore can never play out: snap it to the end position
             // and let the rebuild paint the final state. Sitting on a
             // half-finished animation is what the user sees as a twitch.
-            switchView.setCheckedImmediate(checked)
+            switchView.isChecked = checked
+            switchView.jumpDrawablesToCurrentState()
             applyAppearanceChange()
         }
         dynamicColorState?.setText(
@@ -1290,4 +1300,17 @@ class AboutActivity : Activity() {
             return rowH * count + itemGap * Math.max(0, count - 1) + outer * 2
         }
     }
+
+    /** Tint MaterialSwitch from the runtime AppPalette (custom seeds / AMOLED). */
+    private fun MaterialSwitch.applyPalette(palette: AppPalette) {
+        thumbTintList = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(palette.onPrimary, palette.outline)
+        )
+        trackTintList = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(palette.primary, palette.surfaceVariant)
+        )
+    }
+
 }

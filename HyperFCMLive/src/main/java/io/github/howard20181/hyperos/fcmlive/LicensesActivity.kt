@@ -1,7 +1,7 @@
 package io.github.howard20181.hyperos.fcmlive
 
 import android.app.Activity
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -188,7 +188,7 @@ class LicensesActivity : Activity() {
             )
         )
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setView(wrap)
             .setPositiveButton(android.R.string.ok, null)
             .show()
