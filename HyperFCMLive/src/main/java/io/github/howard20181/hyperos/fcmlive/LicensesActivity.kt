@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import io.github.howard20181.hyperos.fcmlive.theme.AppPalette
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
@@ -152,54 +153,33 @@ class LicensesActivity : Activity() {
         UiUtils.openUrl(this, url)
     }
 
-    /** Full license text in a scrollable in-app dialog (no browser). */
+    /**
+     * Full license text in a Material dialog.
+     *
+     * Uses the standard message slot (not a hand-built setView hierarchy):
+     * that is what crashed on click after the M3 dialog swap — custom
+     * ScrollView + selectable TextView inside MaterialAlertDialogBuilder is
+     * fragile — and it is also what gives official M3 corners and button
+     * colours without painting them by hand.
+     */
     private fun showLicenseDialog(title: String, rawRes: Int) {
-        val pad = dp(24)
-        val wrap = LinearLayout(this)
-        wrap.orientation = LinearLayout.VERTICAL
-        wrap.setPadding(pad, pad, pad, pad)
-
-        val palette = ThemeEngine.palette(this)
-        val titleView = TextView(this)
-        titleView.text = title
-        titleView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_TitleLarge)
-        titleView.setTextColor(palette.onSurface)
-        val titleLp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        titleLp.bottomMargin = pad
-        wrap.addView(titleView, titleLp)
-
-        val body = TextView(this)
-        body.text = readRawText(rawRes)
-        body.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
-        body.setTextColor(palette.onSurfaceVariant)
-        body.setTextIsSelectable(true)
-        body.setLineSpacing(0f, 1.15f)
-
-        val scroll = ScrollView(this)
-        scroll.addView(body)
-        wrap.addView(
-            scroll,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        MaterialAlertDialogBuilder(this)
-            .setView(wrap)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+        val text = readRawText(rawRes)
+        try {
+            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
+                .setTitle(title)
+                .setMessage(text)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        } catch (t: Throwable) {
+            // Never let a license viewer take the screen down.
+            Toast.makeText(this, t.message ?: "dialog failed", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun readRawText(rawRes: Int): String {
         return try {
             resources.openRawResource(rawRes).use { input: InputStream ->
-                val buf = ByteArray(input.available())
-                val n = input.read(buf)
-                if (n > 0) String(buf, 0, n, StandardCharsets.UTF_8) else ""
+                input.readBytes().toString(StandardCharsets.UTF_8)
             }
         } catch (t: Throwable) {
             ""
