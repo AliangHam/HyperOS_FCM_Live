@@ -8,6 +8,8 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.view.View
 import android.view.WindowInsetsController
+import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.DynamicColorsOptions
 
 /**
  * Hooks the runtime palette into an Activity:
@@ -44,9 +46,34 @@ object ThemeSupport {
         return base.createConfigurationContext(config)
     }
 
+    /**
+     * Official Material You dynamic color.
+     * - Dynamic on: wallpaper accent (DynamicColors / Monet).
+     * - Dynamic off with a custom seed: content-based source from that seed.
+     * ThemeEngine / AppPalette still drive hand-tuned layouts and ThemeFactory.
+     */
+    private fun applyDynamicColors(activity: Activity) {
+        try {
+            if (ThemePrefs.dynamicColor(activity)) {
+                DynamicColors.applyToActivityIfAvailable(activity)
+            } else {
+                val seed = ThemePrefs.seedColor(activity)
+                if (seed != 0) {
+                    val options = DynamicColorsOptions.Builder()
+                        .setContentBasedSource(seed)
+                        .build()
+                    DynamicColors.applyToActivityIfAvailable(activity, options)
+                }
+            }
+        } catch (ignored: Throwable) {
+            // ROM without DynamicColors support: static theme colors remain.
+        }
+    }
+
     /** Call before `setContentView`. */
     @JvmStatic
     fun onCreate(activity: Activity) {
+        applyDynamicColors(activity)
         val palette = ThemeEngine.palette(activity)
         installFactory(activity, palette)
         applyWindow(activity, palette)
