@@ -99,6 +99,9 @@ dependencies {
     implementation 'io.github.libxposed:service:102.0.0'
     // Compile-time hidden-API signatures (not packaged in the APK).
     compileOnly project(":hiddenapi:stubs")
+
+    // JVM unit tests (no device / ADB).
+    testImplementation 'junit:junit:4.13.2'
 }
 
 // Refuse to produce a release artifact without a real keystore. The AOSP debug

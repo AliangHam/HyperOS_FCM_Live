@@ -94,7 +94,7 @@ object UpdateChecker {
                 val code = conn.responseCode
                 if (code == 200) {
                     val json = JSONObject(readStream(conn.inputStream))
-                    val tag = json.optString("tag_name", "").replaceFirst("^v", "")
+                    val tag = json.optString("tag_name", "").removePrefix("v")
                     if (tag.isNotEmpty()) {
                         latest = tag
                         ok = true
@@ -244,11 +244,12 @@ object UpdateChecker {
     }
 
     private fun splitVersion(v: String): Array<String> {
-        return v.replaceFirst("^v", "").split("[.-]").toTypedArray()
+        // Kotlin's String.split is literal; Java's split("[.-]") is regex.
+        return v.removePrefix("v").split(Regex("[.-]")).toTypedArray()
     }
 
     private fun hasPrereleaseSuffix(v: String): Boolean {
-        val s = v.replaceFirst("^v", "")
+        val s = v.removePrefix("v")
         val dash = s.indexOf('-')
         return dash >= 0 && dash < s.length - 1
     }
@@ -288,7 +289,7 @@ object UpdateChecker {
                 return null
             }
             // tag:github.com,2008:Repository/<id>/v1.8.0.18
-            val tag = id.substring(id.lastIndexOf('/') + 1).replaceFirst("^v", "")
+            val tag = id.substring(id.lastIndexOf('/') + 1).removePrefix("v")
             if (tag.isEmpty()) {
                 return null
             }
