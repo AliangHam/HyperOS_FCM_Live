@@ -167,4 +167,7 @@
     <string name="status_diag_title">诊断</string>
     <string name="status_copied">已复制</string>
     <string name="status_unknown">未知</string>
+    <string name="app_list_refreshed">应用列表已刷新</string>
+    <string name="a11y_allowlist_on">已在白名单</string>
+    <string name="a11y_allowlist_off">不在白名单</string>
 </resources>

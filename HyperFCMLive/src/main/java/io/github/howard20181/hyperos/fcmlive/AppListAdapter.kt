@@ -240,9 +240,13 @@ class AppListAdapter(
         val parts = ArrayList<String>()
         parts.add(app.label)
         parts.add(app.packageName)
-        parts.add(if (app.checked) "已在白名单" else "不在白名单")
+        parts.add(
+            context.getText(
+                if (app.checked) R.string.a11y_allowlist_on else R.string.a11y_allowlist_off
+            ).toString()
+        )
         if (app.supportMiPush) {
-            parts.add("支持 MiPush")
+            parts.add(context.getText(R.string.mipush_badge).toString())
         }
         if (multiSelectMode) {
             parts.add(if (multiSelected) "已选中" else "未选中")

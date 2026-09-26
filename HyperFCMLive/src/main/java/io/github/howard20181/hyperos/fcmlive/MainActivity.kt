@@ -1517,6 +1517,8 @@ class MainActivity : Activity(), SearchView.OnQueryTextListener {
 
         if (stopRefresh && swipeRefresh != null) {
             swipeRefresh!!.isRefreshing = false
+            // TalkBack: pull-to-refresh spinner is visual-only.
+            A11yUtils.announce(listView, getString(R.string.app_list_refreshed))
         }
     }
 

@@ -15,6 +15,9 @@
     <string name="batch_add_allowlist">Add to whitelist</string>
     <string name="batch_remove_allowlist">Remove from whitelist</string>
     <string name="batch_added">Whitelist updated</string>
+    <string name="app_list_refreshed">App list refreshed</string>
+    <string name="a11y_allowlist_on">In whitelist</string>
+    <string name="a11y_allowlist_off">Not in whitelist</string>
     <string name="batch_nothing_selected">Nothing selected</string>
     <string name="multi_select_tip">Long-press an app card for batch actions</string>
     <string name="installed_apps_permission_denied">App list may be incomplete without this permission</string>
