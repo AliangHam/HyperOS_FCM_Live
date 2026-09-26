@@ -15,6 +15,7 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.TextView
@@ -164,18 +165,25 @@ class AppListAdapter(
         (convertView as? MaterialCardView)?.setCardBackgroundColor(
             if (selected) cardSelectedColor else cardColor
         )
+        bindRowAccessibility(convertView, app, selected)
 
         val pkg = app.packageName
         convertView.setOnClickListener { v ->
             UiUtils.tapFeedback(v)
             if (multiSelectMode) {
                 toggleSelection(pkg)
+                bindRowAccessibility(v, findByPackage(pkg), selectedPkgs.contains(pkg))
                 return@setOnClickListener
             }
             val current = findByPackage(pkg) ?: return@setOnClickListener
             val next = !current.checked
             current.checked = next
             bindStatus(holder.status!!, next)
+            bindRowAccessibility(convertView, current, selected)
+            A11yUtils.announce(
+                convertView,
+                context.getText(if (next) R.string.status_yes else R.string.status_no)
+            )
             listener?.onToggleAllowlist(pkg, next)
         }
 
@@ -219,6 +227,49 @@ class AppListAdapter(
         }
         notifyDataSetChanged()
         listener?.onSelectionChanged(selectedPkgs.size)
+    }
+
+    /**
+     * One TalkBack stop per card: name, package, allowlist state, optional MiPush.
+     * Children are collapsed so the row is not read piece by piece.
+     */
+    private fun bindRowAccessibility(row: View?, app: AppEntry?, multiSelected: Boolean) {
+        if (row == null || app == null) {
+            return
+        }
+        val parts = ArrayList<String>()
+        parts.add(app.label)
+        parts.add(app.packageName)
+        parts.add(if (app.checked) "已在白名单" else "不在白名单")
+        if (app.supportMiPush) {
+            parts.add("支持 MiPush")
+        }
+        if (multiSelectMode) {
+            parts.add(if (multiSelected) "已选中" else "未选中")
+        }
+        row.contentDescription = parts.joinToString("，")
+        row.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        if (row is ViewGroup) {
+            for (i in 0 until row.childCount) {
+                row.getChildAt(i).importantForAccessibility =
+                    View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            }
+        }
+        row.accessibilityDelegate = object : View.AccessibilityDelegate() {
+            @Suppress("DEPRECATION")
+            override fun onInitializeAccessibilityNodeInfo(
+                host: View,
+                info: AccessibilityNodeInfo
+            ) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.className = "android.widget.Button"
+                info.isCheckable = true
+                info.isChecked = app.checked
+                if (multiSelectMode) {
+                    info.isSelected = multiSelected
+                }
+            }
+        }
     }
 
     private fun clearIconTooltip(view: View?) {

@@ -969,7 +969,7 @@ class AboutActivity : Activity() {
             }
         }
         menuBackCallback = null
-        if (panel == null) {
+        if (panel == null || !android.animation.ValueAnimator.areAnimatorsEnabled()) {
             detachMenuOverlay(overlay)
             return
         }
@@ -1021,6 +1021,10 @@ class AboutActivity : Activity() {
     private fun playMenuEnter(
         panel: View, opensAbove: Boolean, rtl: Boolean, curve: Interpolator
     ) {
+        // Respect system "Remove animations" / animator scale.
+        if (!android.animation.ValueAnimator.areAnimatorsEnabled()) {
+            return
+        }
         val set = AnimationSet(false)
         val grow = ScaleAnimation(
             MENU_ENTER_FROM, 1f, MENU_ENTER_FROM, 1f,
