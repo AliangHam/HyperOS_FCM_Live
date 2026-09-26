@@ -12,7 +12,7 @@
       Color roles map 1:1 onto the runtime AppPalette (ThemeEngine / mcu), so
       Material3 components and the hand-tuned layouts share one palette.
     -->
-    <style name="Theme.HyperFCMLive" parent="Theme.Material3.DayNight">
+    <style name="Theme.HyperFCMLive" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">@color/md_page_bg</item>

@@ -7,6 +7,8 @@
     -->
     <style name="ThemeOverlay.HyperFCMLive.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.HyperFCMLive.Dialog</item>
+        <!-- Kill the title/message/button separator line. -->
+        <item name="android:listDivider">@null</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.HyperFCMLive.DialogButton</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.HyperFCMLive.DialogButton</item>
         <item name="buttonBarNeutralButtonStyle">@style/Widget.HyperFCMLive.DialogButton</item>

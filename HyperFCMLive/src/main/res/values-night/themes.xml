@@ -5,7 +5,7 @@
       purpose: this is the resource the app resolves when the user forces dark
       mode (see ThemeSupport.attach, which rewrites uiMode).
     -->
-    <style name="Theme.HyperFCMLive" parent="Theme.Material3.DayNight">
+    <style name="Theme.HyperFCMLive" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">@color/md_page_bg</item>
