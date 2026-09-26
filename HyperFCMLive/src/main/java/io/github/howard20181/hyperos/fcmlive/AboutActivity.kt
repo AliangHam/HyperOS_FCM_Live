@@ -1224,7 +1224,9 @@ class AboutActivity : Activity() {
         private const val MENU_ELEVATION_DP = 3
         private const val POPUP_DISMISS_GRACE_MS = 64L
         private const val MENU_ENTER_FROM = 0.8f
+        /** M3 motion_duration_medium */
         private const val MENU_ENTER_MS = 250L
+        /** M3 motion_duration_short */
         private const val MENU_EXIT_MS = 150L
         private const val MENU_TENSION_FULL = 1.70158f
 

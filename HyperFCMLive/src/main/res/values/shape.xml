@@ -16,6 +16,7 @@
         parent="ShapeAppearance.Material3.Corner.ExtraLarge" />
 
     <!-- App roles mapped onto the scale above. -->
+    <!-- Filled card (M3): no outline stroke; surface sits on page_bg. -->
     <style name="ShapeAppearance.HyperFCMLive.Card" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/shape_corner_extra_large</item>

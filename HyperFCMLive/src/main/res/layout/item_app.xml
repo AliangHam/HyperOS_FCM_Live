@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- M3 filled card: no stroke; separation comes from surface vs page_bg. -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,6 +10,7 @@
     android:minHeight="72dp"
     app:cardBackgroundColor="@color/md_card"
     app:cardElevation="0dp"
+    app:strokeWidth="0dp"
     app:rippleColor="@color/md_popup_item_ripple"
     app:shapeAppearance="@style/ShapeAppearance.HyperFCMLive.Card">
 
