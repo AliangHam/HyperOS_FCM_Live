@@ -1,6 +1,6 @@
 package io.github.howard20181.hyperos.fcmlive
 
-import android.app.Activity
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.content.Intent
@@ -59,7 +59,7 @@ import java.nio.file.FileSystems
 import java.util.Locale
 
 /** About: source, licenses, allowlist backup, update check with red badge. */
-class AboutActivity : Activity() {
+class AboutActivity : AppCompatActivity() {
 
     private val eggTaps = ArrayList<Long>(EGG_TAP_COUNT)
     private var lastEggAtMs: Long = 0

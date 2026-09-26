@@ -1,6 +1,6 @@
 package io.github.howard20181.hyperos.fcmlive
 
-import android.app.Activity
+import androidx.appcompat.app.AppCompatActivity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -42,7 +42,7 @@ import java.util.concurrent.Executors
  * network type decides how long GMS waits between heartbeats. Showing it here
  * means the first thing a user checks is the thing most likely to be at fault.
  */
-class StatusActivity : Activity() {
+class StatusActivity : AppCompatActivity() {
 
     private var content: LinearLayout? = null
     private var hookGroup: LinearLayout? = null

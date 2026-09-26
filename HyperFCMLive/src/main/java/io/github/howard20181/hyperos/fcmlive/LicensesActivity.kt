@@ -1,6 +1,6 @@
 package io.github.howard20181.hyperos.fcmlive
 
-import android.app.Activity
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.content.res.ColorStateList
@@ -25,7 +25,7 @@ import java.nio.charset.StandardCharsets
  * Open-source license list. Deps show version on the right; this project and
  * reference projects use name + license with a vertically centered link icon.
  */
-class LicensesActivity : Activity() {
+class LicensesActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))

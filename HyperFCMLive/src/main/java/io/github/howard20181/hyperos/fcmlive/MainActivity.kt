@@ -1,6 +1,6 @@
 package io.github.howard20181.hyperos.fcmlive
 
-import android.app.Activity
+import androidx.appcompat.app.AppCompatActivity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * MD3-inspired card list; search + overflow (system apps / hide icon) in the
  * top bar; FAB opens GMS FCM diagnostics.
  */
-class MainActivity : Activity(), SearchView.OnQueryTextListener {
+class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
     private val allApps = ArrayList<AppListAdapter.AppEntry>()
     private val filteredApps = ArrayList<AppListAdapter.AppEntry>()

@@ -1,6 +1,6 @@
 package io.github.howard20181.hyperos.fcmlive
 
-import android.app.Activity
+import androidx.appcompat.app.AppCompatActivity
 import android.content.Context
 import android.os.Bundle
 import android.view.View
@@ -16,7 +16,7 @@ import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
  * (`Hooker#shouldApply`), and the rules around enabling the module.
  * Keep this text in sync when those hooks change.
  */
-class HelpActivity : Activity() {
+class HelpActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))
