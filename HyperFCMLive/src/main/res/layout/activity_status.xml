@@ -51,8 +51,7 @@
                 android:paddingEnd="8dp"
                 android:text="@string/module_status"
                 android:textColor="@color/md_on_surface"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.HyperFCMLive.TitleLarge" />
         </FrameLayout>
     </LinearLayout>
 

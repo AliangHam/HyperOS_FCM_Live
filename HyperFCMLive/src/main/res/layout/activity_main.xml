@@ -54,8 +54,7 @@
                     android:paddingEnd="8dp"
                     android:text="@string/settings_title"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
+                    style="@style/TextAppearance.HyperFCMLive.TitleLarge" />
 
                 <SearchView
                     android:id="@+id/search_view"

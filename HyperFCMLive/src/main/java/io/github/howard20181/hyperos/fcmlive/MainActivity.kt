@@ -388,7 +388,7 @@ class MainActivity : Activity(), SearchView.OnQueryTextListener {
         tipView.text = text
         val tooltipPalette = ThemeEngine.palette(this)
         tipView.setTextColor(tooltipPalette.tooltipText)
-        tipView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        tipView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
         tipView.gravity = Gravity.CENTER
         tipView.background = ThemeSupport.cardBackground(this, tooltipPalette.tooltipBg, 4f)
         val padH = dp(12)

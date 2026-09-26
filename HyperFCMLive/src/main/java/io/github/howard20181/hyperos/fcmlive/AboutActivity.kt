@@ -630,7 +630,7 @@ class AboutActivity : Activity() {
         val palette = ThemeEngine.palette(this)
         tipView.text = text
         tipView.setTextColor(palette.tooltipText)
-        tipView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        tipView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
         tipView.background = ThemeSupport.cardBackground(this, palette.tooltipBg, 4f)
         val padH = dp(12)
         val padV = dp(6)
@@ -1080,7 +1080,7 @@ class AboutActivity : Activity() {
     /** One menu label with the shared type, colour and single-line behaviour. */
     private fun menuLabel(text: String, palette: AppPalette): TextView {
         val tv = TextView(this)
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, MENU_ITEM_TEXT_SP.toFloat())
+        tv.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyLarge)
         tv.includeFontPadding = false
         tv.setSingleLine(true)
         tv.ellipsize = TextUtils.TruncateAt.END

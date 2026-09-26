@@ -33,7 +33,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/md_on_surface"
-                android:textSize="16sp" />
+                style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
 
             <TextView
                 android:id="@+id/dep_version"
@@ -41,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:textColor="@color/md_on_surface_variant"
-                android:textSize="12sp" />
+                style="@style/TextAppearance.HyperFCMLive.BodySmall" />
         </LinearLayout>
 
         <TextView
@@ -49,7 +49,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/md_on_surface_variant"
-            android:textSize="12sp" />
+            style="@style/TextAppearance.HyperFCMLive.BodySmall" />
     </LinearLayout>
 
     <ImageView

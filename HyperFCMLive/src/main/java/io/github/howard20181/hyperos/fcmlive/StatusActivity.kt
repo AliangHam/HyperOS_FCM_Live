@@ -145,7 +145,7 @@ class StatusActivity : Activity() {
 
         hookSummary = TextView(this).also {
             it.text = getString(R.string.status_probing)
-            it.setTextSize(12f)
+            it.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
             it.setTextColor(getColor(R.color.md_on_surface_variant))
             it.setPadding(dp(8), dp(4), dp(8), dp(12))
         }
@@ -241,7 +241,7 @@ class StatusActivity : Activity() {
 
         val name = TextView(this)
         name.text = item.target
-        name.setTextSize(13f)
+        name.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         // Method names are identifiers, not prose: monospaced they line up and
         // stay readable where a proportional face makes them run together.
         name.typeface = Typeface.MONOSPACE
@@ -252,7 +252,7 @@ class StatusActivity : Activity() {
         if (note != 0) {
             val noteView = TextView(this)
             noteView.text = getString(note)
-            noteView.setTextSize(11f)
+            noteView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_LabelSmall)
             noteView.setTextColor(getColor(R.color.md_hint_light))
             text.addView(noteView)
         }
@@ -260,7 +260,7 @@ class StatusActivity : Activity() {
 
         val state = TextView(this)
         state.text = stateText(item)
-        state.setTextSize(12f)
+        state.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
         state.setTextColor(stateColor(item))
         // The state words are several times longer in English than in Chinese,
         // and the names they sit next to are monospaced identifiers that are
@@ -326,7 +326,7 @@ class StatusActivity : Activity() {
     private fun commandRow(command: String): View {
         val tv = TextView(this)
         tv.text = command
-        tv.setTextSize(12f)
+        tv.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
         tv.typeface = Typeface.MONOSPACE
         tv.setTextColor(getColor(R.color.md_on_surface))
         tv.setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -398,7 +398,7 @@ class StatusActivity : Activity() {
     private fun sectionLabel(text: String, spaced: Boolean): TextView {
         val tv = TextView(this)
         tv.text = text
-        tv.setTextSize(14f)
+        tv.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         tv.setTextColor(getColor(R.color.md_primary))
         tv.typeface = Typeface.create("sans-medium", Typeface.NORMAL)
         tv.setPadding(dp(8), if (spaced) dp(32) else dp(20), dp(8), dp(6))
@@ -413,7 +413,7 @@ class StatusActivity : Activity() {
     private fun groupHeader(text: String): TextView {
         val tv = TextView(this)
         tv.text = text
-        tv.setTextSize(12f)
+        tv.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
         tv.typeface = Typeface.create("sans-medium", Typeface.NORMAL)
         tv.setTextColor(getColor(R.color.md_on_surface))
         tv.setPadding(dp(16), dp(10), dp(16), dp(6))
@@ -428,7 +428,7 @@ class StatusActivity : Activity() {
 
         val key = TextView(this)
         key.text = getString(keyRes)
-        key.setTextSize(14f)
+        key.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         key.setTextColor(getColor(R.color.md_on_surface_variant))
         val keyLp = LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
@@ -437,7 +437,7 @@ class StatusActivity : Activity() {
 
         val valView = TextView(this)
         valView.text = value
-        valView.setTextSize(14f)
+        valView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         valView.setTextColor(getColor(R.color.md_on_surface))
         valView.typeface = Typeface.create("sans-medium", Typeface.NORMAL)
         // Both halves share the row. A wrap_content value would claim the whole

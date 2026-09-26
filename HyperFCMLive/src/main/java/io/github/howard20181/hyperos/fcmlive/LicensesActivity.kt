@@ -113,7 +113,7 @@ class LicensesActivity : Activity() {
         val header = TextView(this)
         header.text = title
         header.setTextColor(ThemeEngine.palette(this).primary)
-        header.setTextSize(14f)
+        header.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         header.typeface = Typeface.create("sans-medium", Typeface.NORMAL)
         header.setPadding(dp(8), dp(28), dp(8), dp(12))
         list.addView(header)
@@ -162,7 +162,7 @@ class LicensesActivity : Activity() {
         val palette = ThemeEngine.palette(this)
         val titleView = TextView(this)
         titleView.text = title
-        titleView.setTextSize(18f)
+        titleView.setTextAppearance(R.style.TextAppearance_HyperFCMLive_TitleLarge)
         titleView.setTextColor(palette.onSurface)
         val titleLp = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -173,7 +173,7 @@ class LicensesActivity : Activity() {
 
         val body = TextView(this)
         body.text = readRawText(rawRes)
-        body.setTextSize(12f)
+        body.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodySmall)
         body.setTextColor(palette.onSurfaceVariant)
         body.setTextIsSelectable(true)
         body.setLineSpacing(0f, 1.15f)

@@ -47,8 +47,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/md_on_surface"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.HyperFCMLive.TitleMedium" />
 
             <TextView
                 android:id="@+id/app_mipush_badge"
@@ -63,7 +62,7 @@
                 android:singleLine="true"
                 android:text="@string/mipush_badge"
                 android:textColor="@color/md_primary"
-                android:textSize="11sp"
+                style="@style/TextAppearance.HyperFCMLive.LabelSmall"
                 android:visibility="gone" />
         </LinearLayout>
 
@@ -74,7 +73,7 @@
             android:breakStrategy="simple"
             android:hyphenationFrequency="none"
             android:textColor="@color/md_on_surface_variant"
-            android:textSize="12sp" />
+            style="@style/TextAppearance.HyperFCMLive.BodySmall" />
     </LinearLayout>
 
     <ImageView

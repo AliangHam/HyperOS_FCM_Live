@@ -52,8 +52,7 @@
                 android:paddingEnd="8dp"
                 android:text="@string/help"
                 android:textColor="@color/md_on_surface"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.HyperFCMLive.TitleLarge" />
         </FrameLayout>
     </LinearLayout>
 
@@ -85,7 +84,7 @@
                 android:paddingBottom="12dp"
                 android:text="@string/help_section_how"
                 android:textColor="@color/md_primary"
-                android:textSize="14sp" />
+                style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -100,7 +99,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_how_body"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
             </LinearLayout>
 
             <TextView
@@ -113,7 +112,7 @@
                 android:paddingBottom="12dp"
                 android:text="@string/help_section_allowlist"
                 android:textColor="@color/md_primary"
-                android:textSize="14sp" />
+                style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -128,7 +127,7 @@
                     android:fontFamily="sans-medium"
                     android:text="@string/help_allowlist_empty_title"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -137,7 +136,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_allowlist_empty_body"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -146,7 +145,7 @@
                     android:fontFamily="sans-medium"
                     android:text="@string/help_allowlist_checked_title"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -155,7 +154,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_allowlist_checked_body"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
             </LinearLayout>
 
@@ -169,7 +168,7 @@
                 android:paddingBottom="12dp"
                 android:text="@string/help_section_strict"
                 android:textColor="@color/md_primary"
-                android:textSize="14sp" />
+                style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -184,7 +183,7 @@
                     android:fontFamily="sans-medium"
                     android:text="@string/help_strict_on_title"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -193,7 +192,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_strict_on_body"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -202,7 +201,7 @@
                     android:fontFamily="sans-medium"
                     android:text="@string/help_strict_unchanged_title"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -211,7 +210,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_strict_unchanged_body"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
             </LinearLayout>
 
             <TextView
@@ -224,7 +223,7 @@
                 android:paddingBottom="12dp"
                 android:text="@string/help_section_faq"
                 android:textColor="@color/md_primary"
-                android:textSize="14sp" />
+                style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -240,7 +239,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_q1"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -249,7 +248,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_a1"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -259,7 +258,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_q2"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -268,7 +267,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_a2"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -278,7 +277,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_q3"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -287,7 +286,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_a3"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -297,7 +296,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_q4"
                     android:textColor="@color/md_on_surface"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -306,7 +305,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="@string/help_faq_a4"
                     android:textColor="@color/md_on_surface_variant"
-                    android:textSize="14sp" />
+                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

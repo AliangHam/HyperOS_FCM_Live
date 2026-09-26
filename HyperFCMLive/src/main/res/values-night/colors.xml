@@ -1,23 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark fallback when Monet is unavailable. -->
+    <!--
+      Dark counterpart of values/colors.xml. Resolved when the user forces dark
+      (ThemeSupport.attach rewrites uiMode).
+    -->
     <color name="md_primary">#E8B4C0</color>
+    <color name="md_on_primary">#4A0F22</color>
     <color name="md_primary_container">#6B3545</color>
+    <color name="md_on_primary_container">#FFD9E0</color>
+    <color name="md_secondary">#E8B4C0</color>
+    <color name="md_on_secondary">#4A0F22</color>
+    <color name="md_secondary_container">#6B3545</color>
+    <color name="md_on_secondary_container">#FFD9E0</color>
+    <color name="md_tertiary">#E8B4C0</color>
+    <color name="md_on_tertiary">#4A0F22</color>
+    <color name="md_tertiary_container">#6B3545</color>
+    <color name="md_on_tertiary_container">#FFD9E0</color>
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+    <color name="md_error_container">#93000A</color>
+    <color name="md_on_error_container">#FFDAD6</color>
+
     <color name="md_surface">#1A1214</color>
+    <color name="md_on_surface">#F1E4E7</color>
+    <color name="md_surface_variant">#534347</color>
+    <color name="md_on_surface_variant">#C9B4B8</color>
+    <color name="md_surface_container_lowest">#0E0E10</color>
+    <color name="md_surface_container_low">#121212</color>
+    <color name="md_surface_container">#1A1214</color>
+    <color name="md_surface_container_high">#2A2224</color>
+    <color name="md_surface_container_highest">#362C2E</color>
+    <color name="md_surface_bright">#3E3235</color>
+    <color name="md_surface_dim">#120C0E</color>
+    <color name="md_surface_inverse">#F1E4E7</color>
+    <color name="md_on_surface_inverse">#23191B</color>
+
+    <color name="md_outline">#9A8589</color>
+    <color name="md_outline_variant">#534347</color>
+
     <!-- Page background: one step deeper than the cards so they stand out. -->
     <color name="md_page_bg">#0E0E10</color>
-    <color name="md_on_surface">#F1E4E7</color>
-    <color name="md_on_surface_variant">#C9B4B8</color>
-    <color name="md_hint_light">#9A8288</color>
-    <color name="md_outline">#9A8589</color>
     <color name="md_card">#121212</color>
     <color name="md_icon_tint">#E0C8CE</color>
+    <color name="md_hint_light">#9A8288</color>
+
     <!-- Inverse: light bubble on dark surface. -->
     <color name="md_tooltip_bg">#E6E6E0E5</color>
     <color name="md_tooltip_text">#322F37</color>
-    <!-- Overflow menu: the page colour (see values/colors.xml). -->
+
+    <!-- Overflow menu: the page colour. -->
     <color name="md_popup_menu_bg">#0E0E10</color>
     <color name="md_popup_item_ripple">#4DE8B4C0</color>
+
     <!-- Hover state layer: on-surface at 8%. -->
     <color name="md_state_hover">#14F1E4E7</color>
 </resources>
