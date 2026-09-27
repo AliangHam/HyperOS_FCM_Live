@@ -48,6 +48,8 @@ class AboutActivity : AppCompatActivity() {
     )
 
     private var lastEggAtMs = 0L
+    private var insetTop = 0
+    private var insetBottom = 0
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))
@@ -124,7 +126,13 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun applySystemBarInsets() {
-        UiUtils.applyBarInsets(this, findViewById(R.id.top_bar), null, 0)
+        UiUtils.applyBarInsets(this, findViewById(R.id.top_bar), null, 0,
+            object : UiUtils.InsetSink {
+                override fun onInsets(top: Int, bottom: Int) {
+                    insetTop = top
+                    insetBottom = bottom
+                }
+            })
     }
 
     private fun refreshUi() {
@@ -161,16 +169,17 @@ class AboutActivity : AppCompatActivity() {
 
     private fun showPicker(titleRes: Int, entriesRes: Int, current: Int, onPick: (Int) -> Unit) {
         val entries = resources.getStringArray(entriesRes)
-        ThemeSupport.withoutPalettePainting {
-            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
-                .setTitle(titleRes)
-                .setSingleChoiceItems(entries, current) { dialog, which ->
-                    dialog.dismiss()
-                    onPick(which)
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
-        }
+        val anchor = findViewById<View>(R.id.about_content) ?: return
+        AboutDropdown.show(
+            activity = this,
+            anchor = anchor,
+            items = entries,
+            checked = current,
+            insetTop = insetTop,
+            insetBottom = insetBottom,
+            onPick = onPick,
+            onRebuild = { applyAppearanceChange() },
+        )
     }
 
     private fun applyAppearanceChange() {

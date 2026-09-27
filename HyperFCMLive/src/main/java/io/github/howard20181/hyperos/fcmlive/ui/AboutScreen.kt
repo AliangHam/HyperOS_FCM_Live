@@ -1,5 +1,7 @@
 package io.github.howard20181.hyperos.fcmlive.ui
 
+import android.view.LayoutInflater
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -14,10 +16,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -27,11 +31,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.material.materialswitch.MaterialSwitch
 import io.github.howard20181.hyperos.fcmlive.R
 
 @Composable
@@ -63,13 +70,50 @@ fun AboutCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
+private fun RowIcon(@DrawableRes res: Int) {
+    Icon(
+        painter = painterResource(res),
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .padding(end = 14.dp)
+            .size(22.dp)
+    )
+}
+
+/**
+ * M3 switch with the app's check / close thumb glyph (the Compose Switch
+ * stock thumb has no icon slot matching `switch_thumb_icon`).
+ */
+@Composable
+private fun AppSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    AndroidView(
+        factory = { ctx ->
+            MaterialSwitch(ctx).apply {
+                // Selector carries check (on) / close (off), matching View UI.
+                thumbDrawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                    ctx, R.drawable.switch_thumb_icon
+                )
+                isChecked = checked
+                setOnCheckedChangeListener { _, value -> onCheckedChange(value) }
+            }
+        },
+        update = { switch ->
+            switch.setOnCheckedChangeListener(null)
+            switch.isChecked = checked
+            switch.setOnCheckedChangeListener { _, value -> onCheckedChange(value) }
+        }
+    )
+}
+
+@Composable
 fun AboutRow(
+    @DrawableRes icon: Int,
     title: String,
     subtitle: String? = null,
     value: String? = null,
     badge: Boolean = false,
     onClick: (() -> Unit)? = null,
-    trailing: (@Composable () -> Unit)? = null,
 ) {
     val clickable = if (onClick != null) {
         Modifier
@@ -83,6 +127,7 @@ fun AboutRow(
         modifier = clickable.padding(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        RowIcon(icon)
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -125,33 +170,25 @@ fun AboutRow(
                 )
             }
         }
-        if (trailing != null) {
-            trailing()
-        }
     }
 }
 
 @Composable
 fun AboutSwitchRow(
+    @DrawableRes icon: Int,
     title: String,
     subtitle: String? = null,
     stateLabel: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    onClickRow: (() -> Unit)? = null,
 ) {
-    val clickable = if (onClickRow != null) {
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClickRow)
-    } else {
-        Modifier.fillMaxWidth()
-    }
     Row(
-        modifier = clickable.padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        RowIcon(icon)
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -183,22 +220,10 @@ fun AboutSwitchRow(
                 )
             }
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                uncheckedBorderColor = Color.Transparent,
-            )
-        )
+        AppSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
-/** Mutable presentation state for the About screen. */
 data class AboutUi(
     val hideIconChecked: Boolean,
     val hideIconState: String,
@@ -212,7 +237,6 @@ data class AboutUi(
     val updateBadge: Boolean,
 )
 
-/** About page body. Immersive scroll like Help / Status. */
 @Composable
 fun AboutScreen(
     ui: AboutUi,
@@ -228,7 +252,6 @@ fun AboutScreen(
     onImportClick: () -> Unit,
     onSourceClick: () -> Unit,
     onLicensesClick: () -> Unit,
-    seedSwatches: (@Composable () -> Unit)? = null,
 ) {
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(
@@ -243,13 +266,21 @@ fun AboutScreen(
             AboutSectionTitle(stringResource(R.string.about_section_display), spaced = false)
             AboutCard {
                 AboutSwitchRow(
+                    icon = R.drawable.ic_hide_icon,
                     title = stringResource(R.string.hide_launcher_icon),
-                    subtitle = stringResource(R.string.about_sub_hide_icon_off),
+                    subtitle = stringResource(
+                        if (ui.hideIconChecked) {
+                            R.string.about_sub_hide_icon_on
+                        } else {
+                            R.string.about_sub_hide_icon_off
+                        }
+                    ),
                     stateLabel = ui.hideIconState,
                     checked = ui.hideIconChecked,
                     onCheckedChange = onToggleHideIcon,
                 )
                 AboutRow(
+                    icon = R.drawable.ic_language,
                     title = stringResource(R.string.language),
                     subtitle = stringResource(R.string.about_sub_language),
                     value = ui.languageValue,
@@ -260,12 +291,14 @@ fun AboutScreen(
             AboutSectionTitle(stringResource(R.string.about_section_theme))
             AboutCard {
                 AboutRow(
+                    icon = R.drawable.ic_theme_mode,
                     title = stringResource(R.string.theme_mode),
                     subtitle = stringResource(R.string.about_sub_theme_mode),
                     value = ui.themeModeValue,
                     onClick = onThemeModeClick,
                 )
                 AboutSwitchRow(
+                    icon = R.drawable.ic_dynamic_color,
                     title = stringResource(R.string.dynamic_color),
                     subtitle = stringResource(
                         if (ui.dynamicColorChecked) {
@@ -278,16 +311,15 @@ fun AboutScreen(
                     checked = ui.dynamicColorChecked,
                     onCheckedChange = onToggleDynamicColor,
                 )
-                if (seedSwatches != null) {
-                    seedSwatches()
-                }
                 AboutRow(
+                    icon = R.drawable.ic_palette_style,
                     title = stringResource(R.string.palette_style),
                     subtitle = stringResource(R.string.about_sub_palette_style),
                     value = ui.paletteStyleValue,
                     onClick = onPaletteStyleClick,
                 )
                 AboutRow(
+                    icon = R.drawable.ic_color_spec,
                     title = stringResource(R.string.color_spec),
                     subtitle = stringResource(R.string.about_sub_color_spec),
                     value = ui.colorSpecValue,
@@ -298,11 +330,13 @@ fun AboutScreen(
             AboutSectionTitle(stringResource(R.string.about_section_backup))
             AboutCard {
                 AboutRow(
+                    icon = R.drawable.ic_export,
                     title = stringResource(R.string.export_allowlist),
                     subtitle = stringResource(R.string.about_sub_export),
                     onClick = onExportClick,
                 )
                 AboutRow(
+                    icon = R.drawable.ic_import,
                     title = stringResource(R.string.import_allowlist),
                     subtitle = stringResource(R.string.about_sub_import),
                     onClick = onImportClick,
@@ -312,22 +346,26 @@ fun AboutScreen(
             AboutSectionTitle(stringResource(R.string.about_section_project))
             AboutCard {
                 AboutRow(
+                    icon = R.drawable.ic_version,
                     title = stringResource(R.string.about_current_version),
                     value = ui.versionValue,
                     onClick = onVersionClick,
                 )
                 AboutRow(
+                    icon = R.drawable.ic_check_update,
                     title = stringResource(R.string.check_for_updates),
                     subtitle = stringResource(R.string.about_sub_check_update),
                     badge = ui.updateBadge,
                     onClick = onCheckUpdateClick,
                 )
                 AboutRow(
+                    icon = R.drawable.ic_view_source,
                     title = stringResource(R.string.view_source_code),
                     subtitle = stringResource(R.string.about_sub_source),
                     onClick = onSourceClick,
                 )
                 AboutRow(
+                    icon = R.drawable.ic_open_licenses,
                     title = stringResource(R.string.open_source_licenses),
                     subtitle = stringResource(R.string.about_sub_licenses),
                     onClick = onLicensesClick,
