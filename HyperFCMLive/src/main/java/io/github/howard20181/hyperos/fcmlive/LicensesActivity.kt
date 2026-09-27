@@ -209,8 +209,12 @@ class LicensesActivity : AppCompatActivity() {
         /** name, version ("" if none), license label, project URL. */
         private val DEPS = arrayOf(
             arrayOf("AndroidX Annotation", "1.10.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("AndroidX AppCompat", "1.7.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Arch Core", "2.0.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Collection", "1.0.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("AndroidX Compose Foundation", "1.10.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("AndroidX Compose Material3", "1.4.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("AndroidX Compose UI", "1.10.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Core", "1.1.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Interpolator", "1.0.0", "Apache License 2.0", ANDROIDX_URL),
             // Build-only stubs vendored under hiddenapi/stubs; kept for attribution.
@@ -228,6 +232,12 @@ class LicensesActivity : AppCompatActivity() {
             arrayOf("libxposed Service", "102.0.0", "Apache License 2.0", "https://github.com/libxposed/service"),
             arrayOf("Lifecycle Common", "2.0.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("Lifecycle Runtime", "2.0.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf(
+                "Material Components",
+                "1.12.0",
+                "Apache License 2.0",
+                "https://github.com/material-components/material-components-android"
+            ),
             // Vendored source under mcu/ (no Gradle artifact) — listed for attribution.
             arrayOf("Material Color Utilities", "", "Apache License 2.0", MCU_URL),
             arrayOf("SwipeRefreshLayout", "1.2.0", "Apache License 2.0", ANDROIDX_URL),
