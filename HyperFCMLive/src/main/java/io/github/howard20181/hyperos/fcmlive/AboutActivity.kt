@@ -61,8 +61,6 @@ import java.util.Locale
 /** About: source, licenses, allowlist backup, update check with red badge. */
 class AboutActivity : AppCompatActivity() {
 
-    private val eggTaps = ArrayList<Long>(EGG_TAP_COUNT)
-    private var lastEggAtMs: Long = 0
     private var hideIconState: TextView? = null
     private var hideIconSwitch: MaterialSwitch? = null
     private var dynamicColorState: TextView? = null
@@ -71,7 +69,6 @@ class AboutActivity : AppCompatActivity() {
     private var themeModeValue: TextView? = null
     private var paletteStyleValue: TextView? = null
     private var colorSpecValue: TextView? = null
-    private var languageValue: TextView? = null
 
     /** The open menu: a full-screen overlay inside this window, or null. */
     private var menuOverlay: View? = null
@@ -119,21 +116,12 @@ class AboutActivity : AppCompatActivity() {
         bindRow(R.id.row_import_allowlist, this::importAllowlist)
         bindRow(R.id.row_check_update, this::checkForUpdates)
 
-        val versionRow = findViewById<View>(R.id.row_current_version)
-        if (versionRow != null) {
-            versionRow.setOnClickListener { onVersionRowTapped() }
-            // Long press must stay silent as well: consume it, do nothing.
-            versionRow.setOnLongClickListener { true }
-        }
-
         hideIconState = findViewById(R.id.about_hide_icon_state)
         themeModeValue = findViewById(R.id.about_theme_mode_value)
         paletteStyleValue = findViewById(R.id.about_palette_style_value)
         colorSpecValue = findViewById(R.id.about_color_spec_value)
-        languageValue = findViewById(R.id.about_language_value)
         bindHideIconRow()
         bindDynamicColorRow()
-        bindLanguageRow()
         refreshHideIconState()
         refreshAppearanceState()
 
@@ -156,10 +144,6 @@ class AboutActivity : AppCompatActivity() {
             { ThemePrefs.specVersion(this) },
             { index -> ThemePrefs.setSpecVersion(this, index) }
         )
-
-        // Version name (version code), shown under the "Current version" row.
-        val version = findViewById<TextView>(R.id.about_version)
-        version?.text = moduleVersion()
 
         showUpdateBadge(UpdateChecker.isUpdateAvailable(this))
     }
@@ -217,22 +201,6 @@ class AboutActivity : AppCompatActivity() {
      * is the joke toast after a rapid burst of taps, and even then it stays
      * quiet for a while so it cannot be spammed.
      */
-    private fun onVersionRowTapped() {
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastEggAtMs < EGG_COOLDOWN_MS) {
-            // Still inside the cooldown: swallow the tap, no feedback at all.
-            eggTaps.clear()
-            return
-        }
-        eggTaps.removeAll { tap -> now - tap > EGG_WINDOW_MS }
-        eggTaps.add(now)
-        if (eggTaps.size >= EGG_TAP_COUNT) {
-            eggTaps.clear()
-            lastEggAtMs = now
-            toastShort(R.string.no_developer_options)
-        }
-    }
-
     /** The whole row is the touch target; the switch itself stays authoritative. */
     private fun bindHideIconRow() {
         hideIconSwitch = findViewById(R.id.hide_icon_switch)
@@ -371,38 +339,6 @@ class AboutActivity : AppCompatActivity() {
         })
     }
 
-    /**
-     * Language row: an in-app override of the device language. The menu lists
-     * only the two languages the app ships, and picking one re-runs the screen
-     * through [ThemeSupport.attach] — the same configuration rewrite that
-     * forces light/dark, so a single recreate applies both.
-     */
-    private fun bindLanguageRow() {
-        val row = findViewById<View>(R.id.row_language) ?: return
-        row.setOnClickListener(rowClick {
-            showPopupMenu(
-                row,
-                R.string.language, R.array.language_entries,
-                effectiveLanguage(),
-                { index -> ThemePrefs.setLanguage(this, index) }
-            )
-        })
-    }
-
-    /**
-     * Which entry the Language row shows: the pinned choice, or — while the app
-     * still follows the device — whichever of the two is in effect right now, so
-     * the row never sits empty.
-     */
-    private fun effectiveLanguage(): Int {
-        val pinned = ThemePrefs.language(this)
-        if (pinned >= 0) {
-            return pinned
-        }
-        val current = resources.configuration.locales[0]
-        return if (current.language == "zh") 0 else 1
-    }
-
     private fun applyAppearanceChange() {
         ThemeEngine.invalidate()
         recreate()
@@ -415,8 +351,6 @@ class AboutActivity : AppCompatActivity() {
         paletteStyleValue?.text = styles[ThemePrefs.paletteStyle(this).ordinal]
         val specs = resources.getStringArray(R.array.color_spec_entries)
         colorSpecValue?.text = specs[ThemePrefs.specVersion(this)]
-        val languages = resources.getStringArray(R.array.language_entries)
-        languageValue?.text = languages[effectiveLanguage()]
     }
 
     private fun refreshHideIconState() {
@@ -424,15 +358,6 @@ class AboutActivity : AppCompatActivity() {
             if (LauncherIcon.isHidden(this)) R.string.about_sub_hide_icon_on
             else R.string.about_sub_hide_icon_off
         )
-    }
-
-    private fun moduleVersion(): String {
-        return try {
-            val pi = packageManager.getPackageInfo(packageName, 0)
-            pi.versionName + " (" + pi.longVersionCode + ")"
-        } catch (t: Throwable) {
-            "unknown"
-        }
     }
 
     private fun currentAllowlist(): Set<String> {
@@ -1211,9 +1136,6 @@ class AboutActivity : AppCompatActivity() {
         private const val REQ_IMPORT = 2002
 
         /** Easter egg: 7 taps on the version row within 2s, then silent for 10s. */
-        private const val EGG_TAP_COUNT = 7
-        private const val EGG_WINDOW_MS = 2000L
-        private const val EGG_COOLDOWN_MS = 10000L
 
         /** M3 Large — @dimen/shape_corner_large */
         private const val MENU_CONTAINER_RADIUS_DP = 16

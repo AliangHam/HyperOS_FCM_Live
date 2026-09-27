@@ -1156,18 +1156,6 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             popup.dismiss()
         }
 
-        val rowStatus = content.findViewById<View>(R.id.menu_status)
-        if (rowStatus != null) {
-            rowStatus.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-            rowStatus.setOnClickListener {
-                // No haptic here: this row navigates away, and the buzz it used
-                // to fire read as a stray vibration before the next screen
-                // appeared.
-                popup.dismiss()
-                startActivity(Intent(this, StatusActivity::class.java))
-            }
-        }
-
         val rowAbout = content.findViewById<View>(R.id.menu_about)
         if (rowAbout != null) {
             rowAbout.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT

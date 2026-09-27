@@ -3,20 +3,14 @@ package io.github.howard20181.hyperos.fcmlive.theme
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
-import java.util.Locale
 import io.github.howard20181.hyperos.fcmlive.mcu.Scheme
 
 /**
  * Appearance settings: theme mode (including the AMOLED pure-black variant),
- * dynamic color with a custom seed, Material palette style, color spec version
- * and the in-app language. Stored in a private prefs file — unlike the allowlist
- * these are UI-only, so they never need to reach system_server.
+ * dynamic color with a custom seed, Material palette style, and color spec.
+ * UI-only prefs — they never reach system_server.
  *
- * Writes use `apply()`, not `commit()`: they run on the main
- * thread from click handlers, and everything that reads them back is this same
- * process, whose in-memory copy `apply()` updates synchronously. Only
- * `Prefs` needs `commit()`, because there the write has to be on
- * disk before the broadcast that announces it crosses into system_server.
+ * Writes use `apply()` on the main thread; in-memory reads see them immediately.
  */
 object ThemePrefs {
 
@@ -38,15 +32,9 @@ object ThemePrefs {
     private const val KEY_SEED_COLOR = "seed_color"
     /** Legacy flag from when AMOLED was a separate switch; migrated on read. */
     private const val KEY_AMOLED = "amoled"
-    private const val KEY_LANGUAGE = "language"
-    /** Follow the device language (the default: the app is not pinned). */
-    const val LANGUAGE_SYSTEM = -1
-    /** Number of entries in `R.array.language_entries`. */
-    const val LANGUAGE_COUNT = 2
 
     /** Default style matches what Android's own Monet engine generates. */
     private val DEFAULT_STYLE = Scheme.Variant.TONAL_SPOT.ordinal
-    /** Default spec is the current Material 3 Expressive one. */
     private const val DEFAULT_SPEC = SPEC_2025
 
     private fun prefs(context: Context): SharedPreferences {
@@ -57,7 +45,6 @@ object ThemePrefs {
     fun themeMode(context: Context): Int {
         val p = prefs(context)
         var mode = p.getInt(KEY_THEME_MODE, MODE_SYSTEM)
-        // Migrate the old standalone AMOLED switch into a real theme mode.
         if (mode == MODE_DARK && p.getBoolean(KEY_AMOLED, false)) {
             mode = MODE_AMOLED
             p.edit().putInt(KEY_THEME_MODE, MODE_AMOLED).remove(KEY_AMOLED).apply()
@@ -115,40 +102,8 @@ object ThemePrefs {
         prefs(context).edit().putInt(KEY_SEED_COLOR, color).apply()
     }
 
-    /** Whether the resolved mode is the AMOLED pure-black variant. */
     @JvmStatic
     fun isAmoled(context: Context): Boolean = themeMode(context) == MODE_AMOLED
-
-    /**
-     * In-app language, or [LANGUAGE_SYSTEM] to follow the device.
-     *
-     * Not strictly a theme setting, but it is applied by the very same
-     * configuration rewrite in [ThemeSupport.attach] that forces
-     * light/dark, so the two are changed by one and the same recreate. Going
-     * through our own preference instead of `LocaleManager` keeps the
-     * behaviour identical on every ROM (HyperOS included) and works below the
-     * per-app-language APIs.
-     */
-    @JvmStatic
-    fun language(context: Context): Int {
-        val index = prefs(context).getInt(KEY_LANGUAGE, LANGUAGE_SYSTEM)
-        return if (index in 0 until LANGUAGE_COUNT) index else LANGUAGE_SYSTEM
-    }
-
-    @JvmStatic
-    fun setLanguage(context: Context, index: Int) {
-        prefs(context).edit().putInt(KEY_LANGUAGE, index).apply()
-    }
-
-    /** Locale to force, or `null` to keep the device's own choice. */
-    @JvmStatic
-    fun locale(context: Context): Locale? {
-        return when (language(context)) {
-            0 -> Locale.SIMPLIFIED_CHINESE
-            1 -> Locale.ENGLISH
-            else -> null
-        }
-    }
 
     /** Resolved dark/light for the current mode (MODE_SYSTEM reads the device). */
     @JvmStatic

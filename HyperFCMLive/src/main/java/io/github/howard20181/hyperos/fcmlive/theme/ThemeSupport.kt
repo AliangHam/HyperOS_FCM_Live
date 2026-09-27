@@ -21,29 +21,20 @@ import com.google.android.material.color.DynamicColorsOptions
  */
 object ThemeSupport {
 
-    /** Call from `Activity.attachBaseContext`. */
+    /** Call from `Activity.attachBaseContext`. Forces light/dark when pinned. */
     @JvmStatic
     fun attach(base: Context): Context {
         val mode = ThemePrefs.themeMode(base)
-        val locale = ThemePrefs.locale(base)
-        if (mode == ThemePrefs.MODE_SYSTEM && locale == null) {
+        if (mode == ThemePrefs.MODE_SYSTEM) {
             return base
         }
         val config = Configuration(base.resources.configuration)
-        if (mode != ThemePrefs.MODE_SYSTEM) {
-            config.uiMode = (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
-                if (mode == ThemePrefs.MODE_DARK) {
-                    Configuration.UI_MODE_NIGHT_YES
-                } else {
-                    Configuration.UI_MODE_NIGHT_NO
-                }
-        }
-        if (locale != null) {
-            // Same rewrite, second axis: the chosen locale decides which values-*
-            // folder resolves, so the in-app language switch costs no extra
-            // machinery — a recreate re-runs attach() and re-inflates everything.
-            config.setLocale(locale)
-        }
+        config.uiMode = (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+            if (mode == ThemePrefs.MODE_DARK || mode == ThemePrefs.MODE_AMOLED) {
+                Configuration.UI_MODE_NIGHT_YES
+            } else {
+                Configuration.UI_MODE_NIGHT_NO
+            }
         return base.createConfigurationContext(config)
     }
 

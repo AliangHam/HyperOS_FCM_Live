@@ -105,7 +105,7 @@
                 android:id="@+id/row_hide_icon"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card_group_top_ripple"
+                android:background="@drawable/bg_card_single_ripple"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
@@ -157,65 +157,6 @@
                     android:layout_marginStart="12dp"
                     android:contentDescription="@string/hide_launcher_icon"
                     app:thumbIcon="@drawable/switch_thumb_icon" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/row_language"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:background="@drawable/bg_card_group_bottom_ripple"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:minHeight="72dp"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="14dp">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_marginEnd="14dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_language"
-                    android:tint="@color/md_icon_tint" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:text="@string/language"
-                        android:textColor="@color/md_on_surface"
-                        style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:text="@string/about_sub_language"
-                        android:textColor="@color/md_on_surface_variant"
-                        style="@style/TextAppearance.HyperFCMLive.BodySmall" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/about_language_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:gravity="end|center_vertical"
-                    android:textColor="@color/md_primary"
-                    style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
             </LinearLayout>
 
             <TextView
@@ -609,60 +550,10 @@
                 style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
 
             <LinearLayout
-                android:id="@+id/row_current_version"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card_group_top_ripple"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:minHeight="72dp"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="14dp">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_marginEnd="14dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_version"
-                    android:tint="@color/md_icon_tint" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:text="@string/about_current_version"
-                        android:textColor="@color/md_on_surface"
-                        style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
-
-                    <TextView
-                        android:id="@+id/about_version"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:textColor="@color/md_on_surface_variant"
-                        style="@style/TextAppearance.HyperFCMLive.BodySmall" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
                 android:id="@+id/row_check_update"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:background="@drawable/bg_card_group_middle_ripple"
+                android:background="@drawable/bg_card_group_top_ripple"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
