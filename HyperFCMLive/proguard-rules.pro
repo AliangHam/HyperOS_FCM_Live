@@ -17,5 +17,10 @@
 # Material3 widgets inflated from XML / styled via reflection.
 -keep class com.google.android.material.** { *; }
 
+# Jetpack Compose (Help / Status). R8 without these keeps can crash at setContent.
+-keep class androidx.compose.** { *; }
+-keep class androidx.activity.compose.** { *; }
+-dontwarn androidx.compose.**
+
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,MethodParameters
 -keepattributes SourceFile,LineNumberTable

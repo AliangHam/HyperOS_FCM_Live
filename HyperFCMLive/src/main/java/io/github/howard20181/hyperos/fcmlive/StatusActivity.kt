@@ -72,10 +72,14 @@ class StatusActivity : AppCompatActivity() {
 
     private fun render(ui: StatusUi) {
         val host = composeView ?: return
-        host.setContent {
-            HyperFCMLiveTheme {
-                StatusScreen(ui = ui, onCopyCommand = ::copyToClipboard)
+        try {
+            host.setContent {
+                HyperFCMLiveTheme {
+                    StatusScreen(ui = ui, onCopyCommand = ::copyToClipboard)
+                }
             }
+        } catch (t: Throwable) {
+            // Compose runtime missing / R8 strip: avoid taking the screen down.
         }
     }
 

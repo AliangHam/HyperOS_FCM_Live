@@ -33,14 +33,16 @@ class HelpActivity : AppCompatActivity() {
 
         val composeView = findViewById<androidx.compose.ui.platform.ComposeView>(R.id.help_content)
         composeView?.let {
-            // XML @color/md_page_bg is the system accent on API 31+; the inset
-            // padding strip would show that (often grey) while Compose paints
-            // ThemeEngine's pageBg. Force both to the same runtime colour.
             it.setBackgroundColor(io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine.palette(this).pageBg)
-            it.setContent {
-                io.github.howard20181.hyperos.fcmlive.theme.HyperFCMLiveTheme {
-                    io.github.howard20181.hyperos.fcmlive.ui.HelpScreen()
+            try {
+                it.setContent {
+                    io.github.howard20181.hyperos.fcmlive.theme.HyperFCMLiveTheme {
+                        io.github.howard20181.hyperos.fcmlive.ui.HelpScreen()
+                    }
                 }
+            } catch (t: Throwable) {
+                // Compose runtime missing / R8 strip: keep the page alive.
+                it.visibility = View.GONE
             }
         }
     }

@@ -119,14 +119,30 @@ object ThemeSupport {
         return (max - min) < 0.04f
     }
 
-    /** Call before `setContentView`. */
+    /** Call before `setContentView`. Must never throw: UI setup is best-effort. */
     @JvmStatic
     fun onCreate(activity: Activity) {
-        applyDynamicColors(activity)
-        val palette = ThemeEngine.palette(activity)
-        installFactory(activity, palette)
-        applyWindow(activity, palette)
-        installCardPainter(activity, palette)
+        try {
+            applyDynamicColors(activity)
+        } catch (ignored: Throwable) {
+        }
+        val palette = try {
+            ThemeEngine.palette(activity)
+        } catch (ignored: Throwable) {
+            return
+        }
+        try {
+            installFactory(activity, palette)
+        } catch (ignored: Throwable) {
+        }
+        try {
+            applyWindow(activity, palette)
+        } catch (ignored: Throwable) {
+        }
+        try {
+            installCardPainter(activity, palette)
+        } catch (ignored: Throwable) {
+        }
     }
 
     /**
@@ -174,32 +190,17 @@ object ThemeSupport {
     /**
      * Install the palette painter on the Activity's LayoutInflater.
      *
-     * AppCompat has already called setFactory2 by the time onCreate runs, so the
-     * public setter throws. That used to be swallowed, which left XML layouts on
-     * the raw system accent (often monochrome after overnight HyperOS palette
-     * refresh) and ignored the in-app palette style. Replace mFactory2 via
-     * reflection, chaining the previous factory so AppCompat widgets stay intact.
+     * Only use the public setter. Force-replacing AppCompat's factory via
+     * reflection made list/dialog inflation fragile (Binary XML crashes on
+     * some ROMs, including Android 16). If AppCompat already installed a
+     * factory, skip painting that window instead of hijacking it.
      */
     private fun installFactory(activity: Activity, palette: AppPalette) {
         val inflater = activity.layoutInflater
         try {
             inflater.setFactory2(ThemeFactory(activity, inflater, palette))
-            return
         } catch (ignored: Throwable) {
-            // Factory already installed (AppCompat) — force-replace below.
-        }
-        try {
-            val factory2Field = LayoutInflater::class.java.getDeclaredField("mFactory2")
-            val factoryField = LayoutInflater::class.java.getDeclaredField("mFactory")
-            factory2Field.isAccessible = true
-            factoryField.isAccessible = true
-            val previous = factory2Field.get(inflater) as? LayoutInflater.Factory2
-            val factory = ThemeFactory(activity, inflater, palette, previous)
-            factory2Field.set(inflater, factory)
-            factoryField.set(inflater, factory)
-        } catch (ignored: Throwable) {
-            // Hidden-API block or exotic LayoutInflater: layout falls back to
-            // static resources / system DynamicColors.
+            // Factory already installed (AppCompat) — leave the platform factory.
         }
     }
 
