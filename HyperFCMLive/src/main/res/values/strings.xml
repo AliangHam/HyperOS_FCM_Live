@@ -36,7 +36,7 @@
     <string name="no_developer_options">这里没有开发者选项</string>
     <string name="about_sub_hide_icon_on">已隐藏，可从 LSPosed 打开</string>
     <string name="about_sub_hide_icon_off">已显示，点击后隐藏</string>
-    <string name="about_sub_check_update">当前版本 2.5.0 (25)</string>
+    <string name="about_sub_check_update">当前版本 2.6.0 (26)</string>
     <string name="about_sub_export">将白名单保存为文本文件</string>
     <string name="about_sub_import">从文本文件恢复白名单</string>
     <string name="about_sub_source">本项目采用 GNU GPL-3.0 协议</string>

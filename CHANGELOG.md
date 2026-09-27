@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.6.0
+
+- 全新桌面图标，支持 Adaptive Icon 与 Themed Icon
+- 桌面名称改为 HyperGreeze
+- 列表支持拉伸回弹（Stretch overscroll）
+- 修复 Android 16 上关闭无障碍时可能崩溃的问题
+- 修复小窗/分屏下点「更多选项」菜单位置不正确的问题
+- 精简多个入口
+- 降低启动与主题切换时异常崩溃的概率
+
 ## 2.5.0
 
 - 将原项目绝大部分 Java 代码迁移至 Kotlin，部分界面使用 Jetpack Compose（体积大小变化是正常的）
