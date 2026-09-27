@@ -102,6 +102,11 @@ class Hooker : XposedModule() {
             log(Log.ERROR, TAG, "Failed to hook GreezeManagerService", t)
         }
         try {
+            hookGreezerNoRestrict(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook GreezerNoRestrict", t)
+        }
+        try {
             hookDomesticPolicyManager(classLoader)
         } catch (t: Throwable) {
             log(Log.ERROR, TAG, "Failed to hook DomesticPolicyManager", t)
@@ -167,6 +172,11 @@ class Hooker : XposedModule() {
                 hookGlobalFeatureConfigureHelper(classLoader)
             } catch (t: Throwable) {
                 log(Log.ERROR, TAG, "Failed to hook GlobalFeatureConfigureHelper", t)
+            }
+            try {
+                hookNoRestrictList(classLoader)
+            } catch (t: Throwable) {
+                log(Log.ERROR, TAG, "Failed to hook NoRestrictList", t)
             }
         }
     }
@@ -798,6 +808,223 @@ class Hooker : XposedModule() {
         }
     }
 
+    /**
+     * P1: keep GMS in Settings.System.MILLET_NO_RESTRICT_APP.
+     *
+     * PowerKeeper generates that setting from userTable rows whose literal
+     * bgControl equals "noRestrict". GMS is stuck at "miuiAuto" (scenario 0)
+     * because the policy UI hides the selector for packages without a launcher
+     * icon, so dealNoRestrictApp() never includes it. Greezer's
+     * mNoRestrictAppSet is the shared filter for both the Aurogon quick-freeze
+     * path and PowerStrategyMode (tobg / from system); without GMS in the set
+     * the UID gets frozen even when mGmsLimitEnabled is false.
+     *
+     * Hooking inside PowerKeeper removes the race that Shizuku watchdogs have:
+     * every regeneration of the projection includes GMS at the source.
+     */
+    private fun hookNoRestrictList(classLoader: ClassLoader) {
+        // Source-level: ensure getNoRestrictApps() always returns GMS.
+        try {
+            val userConfigureHelperClass =
+                classLoader.loadClass("com.miui.powerkeeper.provider.UserConfigureHelper")
+            val getNoRestrictAppsMethod = userConfigureHelperClass.getDeclaredMethod(
+                "getNoRestrictApps", Context::class.java
+            )
+            hookE(getNoRestrictAppsMethod).intercept { chain: XposedInterface.Chain ->
+                val result = chain.proceed()
+                try {
+                    if (result is MutableList<*>) {
+                        @Suppress("UNCHECKED_CAST")
+                        addIfAbsent(result as MutableList<Any?>, GMS_PACKAGE_NAME)
+                    } else if (result is List<*>) {
+                        val copy = ArrayList<Any?>(result)
+                        addIfAbsent(copy, GMS_PACKAGE_NAME)
+                        return@intercept copy
+                    }
+                } catch (t: Throwable) {
+                    log(Log.ERROR, TAG, "Failed to extend getNoRestrictApps", t)
+                }
+                result
+            }
+            deoptimize(getNoRestrictAppsMethod)
+        } catch (e: NoSuchMethodException) {
+            logSkip("UserConfigureHelper#getNoRestrictApps absent, skip")
+        } catch (e: ClassNotFoundException) {
+            logSkip("UserConfigureHelper class absent, skip")
+        }
+
+        // Belt-and-suspenders: after dealNoRestrictApp() writes the projection,
+        // verify GMS is present and repair if a path bypassed getNoRestrictApps.
+        try {
+            val activeStateControllerClass =
+                classLoader.loadClass("com.miui.powerkeeper.controller.ActiveStateController")
+            val dealNoRestrictAppMethod = activeStateControllerClass.getDeclaredMethod(
+                "dealNoRestrictApp"
+            )
+            hookE(dealNoRestrictAppMethod).intercept { chain: XposedInterface.Chain ->
+                chain.proceed()
+                try {
+                    ensureGmsInMilletSetting()
+                } catch (t: Throwable) {
+                    log(Log.ERROR, TAG, "Failed to repair MILLET_NO_RESTRICT_APP", t)
+                }
+            }
+            deoptimize(dealNoRestrictAppMethod)
+        } catch (e: NoSuchMethodException) {
+            logSkip("ActiveStateController#dealNoRestrictApp absent, skip")
+        } catch (e: ClassNotFoundException) {
+            logSkip("ActiveStateController class absent, skip")
+        }
+    }
+
+    /**
+     * Read Settings.System.MILLET_NO_RESTRICT_APP and append GMS when missing.
+     * Preserves every existing entry and ordering.
+     */
+    private fun ensureGmsInMilletSetting() {
+        val context = getSystemContext() ?: getPowerKeeperContext() ?: return
+        val resolver = context.contentResolver
+        val raw = android.provider.Settings.System.getString(resolver, MILLET_NO_RESTRICT_APP_KEY)
+            ?: ""
+        val entries = raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        if (entries.contains(GMS_PACKAGE_NAME)) return
+        val updated = if (entries.isEmpty()) {
+            GMS_PACKAGE_NAME
+        } else {
+            entries.joinToString(", ") + ", " + GMS_PACKAGE_NAME
+        }
+        android.provider.Settings.System.putString(resolver, MILLET_NO_RESTRICT_APP_KEY, updated)
+        log(Log.INFO, TAG, "MILLET_NO_RESTRICT_APP: appended GMS (was: $raw)")
+    }
+
+    /**
+     * PowerKeeper's own Context, distinct from system_server's.
+     * Cached after the first successful lookup in this process.
+     */
+    @Volatile
+    private var powerKeeperContext: Context? = null
+
+    private fun getPowerKeeperContext(): Context? {
+        if (powerKeeperContext != null) return powerKeeperContext
+        return try {
+            val activityThreadClass = Class.forName("android.app.ActivityThread")
+            val currentApplication = activityThreadClass.getMethod("currentApplication")
+            val ctx = currentApplication.invoke(null)
+            if (ctx is Context) {
+                powerKeeperContext = ctx
+                ctx
+            } else {
+                null
+            }
+        } catch (ignored: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * P2: Greezer freeze-path safety net in system_server.
+     *
+     * Even with MILLET_NO_RESTRICT_APP repaired at the source, a narrow race
+     * remains if Greezer evaluates a freeze before PowerKeeper regenerates the
+     * projection. PolicyMaker.isAllowFreeze() is the shared gate for
+     * PowerStrategyMode (tobg / from system); returning "cannot freeze" for GMS
+     * closes that window and also covers ROMs where the PowerKeeper-side hook
+     * target renames.
+     */
+    private fun hookGreezerNoRestrict(classLoader: ClassLoader) {
+        // PolicyMaker.isAllowFreeze(uid): deny freeze for GMS.
+        try {
+            val policyMakerClass =
+                classLoader.loadClass("com.miui.server.greeze.power.PolicyMaker")
+            // Probe: return type may be boolean (isAllowFreeze) or int (status code).
+            val isAllowFreezeMethods = policyMakerClass.declaredMethods.filter { m ->
+                m.name == "isAllowFreeze" && m.parameterCount == 1
+            }
+            if (isAllowFreezeMethods.isEmpty()) {
+                logSkip("PolicyMaker#isAllowFreeze absent, skip")
+            } else {
+                for (method in isAllowFreezeMethods) {
+                    method.isAccessible = true
+                    hookE(method).intercept { chain: XposedInterface.Chain ->
+                        val uid = chain.getArg(0)
+                        if (uid is Int && isGmsUid(uid)) {
+                            // "Cannot freeze": boolean false, or int 0 / -1 depending on ROM.
+                            return@intercept skipValueFor(method.returnType)
+                        }
+                        chain.proceed()
+                    }
+                    deoptimize(method)
+                    log(Log.INFO, TAG, "PolicyMaker#isAllowFreeze hooked (${method.returnType.simpleName})")
+                }
+            }
+        } catch (e: ClassNotFoundException) {
+            logSkip("PolicyMaker class absent, skip")
+        } catch (e: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook PolicyMaker#isAllowFreeze", e)
+        }
+
+        // AurogonImmobulusMode.triggerQuickFreeze(uid, reason): skip GMS.
+        try {
+            val aurogonClass =
+                classLoader.loadClass("com.miui.server.greeze.AurogonImmobulusMode")
+            val triggerQuickFreezeMethods = aurogonClass.declaredMethods.filter { m ->
+                m.name == "triggerQuickFreeze" && m.parameterCount >= 1
+            }
+            if (triggerQuickFreezeMethods.isEmpty()) {
+                logSkip("AurogonImmobulusMode#triggerQuickFreeze absent, skip")
+            } else {
+                for (method in triggerQuickFreezeMethods) {
+                    method.isAccessible = true
+                    hookE(method).intercept { chain: XposedInterface.Chain ->
+                        val uid = chain.getArg(0)
+                        if (uid is Int && isGmsUid(uid)) {
+                            return@intercept skipValueFor(method.returnType)
+                        }
+                        chain.proceed()
+                    }
+                    deoptimize(method)
+                }
+                log(Log.INFO, TAG, "AurogonImmobulusMode#triggerQuickFreeze hooked (${triggerQuickFreezeMethods.size} overload(s))")
+            }
+        } catch (e: ClassNotFoundException) {
+            logSkip("AurogonImmobulusMode class absent, skip")
+        } catch (e: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook AurogonImmobulusMode#triggerQuickFreeze", e)
+        }
+    }
+
+    /**
+     * True when [uid] belongs to GMS (any Android user). Uses the package
+     * manager when available; falls back to comparing against known GMS UIDs
+     * resolved once per process.
+     */
+    private fun isGmsUid(uid: Int): Boolean {
+        val appId = uid % 100000
+        // Cache hit: done.
+        if (cachedGmsAppId != null) {
+            return appId == cachedGmsAppId
+        }
+        // First call: resolve and cache.
+        val gms = gmsUid()
+        if (gms != null) {
+            cachedGmsAppId = gms % 100000
+            return appId == cachedGmsAppId
+        }
+        // gmsUid() failed; try PackageManager directly.
+        return try {
+            val context = getSystemContext() ?: return false
+            val info = context.packageManager.getApplicationInfo(GMS_PACKAGE_NAME, 0)
+            val resolved = info.uid % 100000
+            cachedGmsAppId = resolved
+            appId == resolved
+        } catch (ignored: Throwable) {
+            false
+        }
+    }
+
+    @Volatile
+    private var cachedGmsAppId: Int? = null
+
     @Volatile
     private var sAllowlist: Set<String> = emptySet()
 
@@ -1296,6 +1523,7 @@ class Hooker : XposedModule() {
             "com.google.firebase.iid.FirebaseInstanceIdReceiver"
         private const val GMS_PACKAGE_NAME = "com.google.android.gms"
         private const val GMS_PERSISTENT_PROCESS_NAME = "com.google.android.gms.persistent"
+        private const val MILLET_NO_RESTRICT_APP_KEY = "MILLET_NO_RESTRICT_APP"
 
         private const val ALLOWLIST_STALE_MS = 10_000L
         private const val ALLOWLIST_RELOAD_MIN_MS = 500L
