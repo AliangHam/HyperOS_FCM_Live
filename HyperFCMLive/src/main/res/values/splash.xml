@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand blue from the launcher icon gradient (center stop). -->
+    <color name="splash_bg">#2196F3</color>
+    <color name="splash_icon_bg">@android:color/transparent</color>
+</resources>

@@ -59,4 +59,15 @@
         <item name="android:textColorPrimary">@color/md_on_surface</item>
         <item name="android:textColorSecondary">@color/md_on_surface_variant</item>
     </style>
+
+    <!--
+      Android 12+ SplashScreen. Applied to MainActivity / LauncherAlias only;
+      postSplashScreenTheme hands the window back to the normal M3 theme.
+    -->
+    <style name="Theme.HyperFCMLive.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_bg</item>
+        <item name="postSplashScreenTheme">@style/Theme.HyperFCMLive</item>
+    </style>
 </resources>

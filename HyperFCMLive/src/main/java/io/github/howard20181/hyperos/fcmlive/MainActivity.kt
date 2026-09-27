@@ -1,6 +1,7 @@
 package io.github.howard20181.hyperos.fcmlive
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -126,6 +127,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         ThemeSupport.onCreate(this)
         appliedPalette = ThemeEngine.palette(this)
