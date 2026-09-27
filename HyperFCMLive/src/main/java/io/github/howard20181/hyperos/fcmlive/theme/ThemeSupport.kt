@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowInsetsController
 import com.google.android.material.color.DynamicColors
@@ -79,12 +80,35 @@ object ThemeSupport {
         applyWindow(activity, palette)
     }
 
+    /**
+     * Install the palette painter on the Activity's LayoutInflater.
+     *
+     * AppCompat has already called setFactory2 by the time onCreate runs, so the
+     * public setter throws. That used to be swallowed, which left XML layouts on
+     * the raw system accent (often monochrome after overnight HyperOS palette
+     * refresh) and ignored the in-app palette style. Replace mFactory2 via
+     * reflection, chaining the previous factory so AppCompat widgets stay intact.
+     */
     private fun installFactory(activity: Activity, palette: AppPalette) {
+        val inflater = activity.layoutInflater
         try {
-            val inflater = activity.layoutInflater
             inflater.setFactory2(ThemeFactory(activity, inflater, palette))
+            return
         } catch (ignored: Throwable) {
-            // A factory can only be installed once; skip rather than crash.
+            // Factory already installed (AppCompat) — force-replace below.
+        }
+        try {
+            val factory2Field = LayoutInflater::class.java.getDeclaredField("mFactory2")
+            val factoryField = LayoutInflater::class.java.getDeclaredField("mFactory")
+            factory2Field.isAccessible = true
+            factoryField.isAccessible = true
+            val previous = factory2Field.get(inflater) as? LayoutInflater.Factory2
+            val factory = ThemeFactory(activity, inflater, palette, previous)
+            factory2Field.set(inflater, factory)
+            factoryField.set(inflater, factory)
+        } catch (ignored: Throwable) {
+            // Hidden-API block or exotic LayoutInflater: layout falls back to
+            // static resources / system DynamicColors.
         }
     }
 

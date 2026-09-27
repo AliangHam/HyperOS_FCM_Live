@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import com.google.android.material.card.MaterialCardView
 import io.github.howard20181.hyperos.fcmlive.R
 
 /**
@@ -21,11 +22,15 @@ import io.github.howard20181.hyperos.fcmlive.R
  * read the raw resource ids from the [AttributeSet] — before resolution —
  * and repaint the freshly created view. Inflation itself is untouched: any tag
  * we cannot build simply falls through to the platform's own path.
+ *
+ * When an AppCompat factory is already installed, [ThemeSupport] chains this
+ * one behind it so widget compatibility is preserved and only the repaint runs.
  */
 internal class ThemeFactory(
     @Suppress("UNUSED_PARAMETER") context: Context,
     private val inflater: LayoutInflater,
-    private val palette: AppPalette
+    private val palette: AppPalette,
+    private val delegate: LayoutInflater.Factory2? = null
 ) : LayoutInflater.Factory2 {
 
     private val colorRoles: MutableMap<Int, Int> = HashMap()
@@ -80,27 +85,34 @@ internal class ThemeFactory(
         context: Context,
         attrs: AttributeSet
     ): View? {
-        var view: View? = null
-        for (prefix in PREFIXES) {
-            try {
-                view = inflater.createView(name, prefix, attrs)
-            } catch (ignored: Throwable) {
-                view = null
-            }
-            if (view != null) {
-                break
-            }
+        // Prefer the existing (AppCompat) factory so platform widgets keep
+        // their compatibility wrappers; we only repaint afterwards.
+        val delegated = try {
+            delegate?.onCreateView(parent, name, context, attrs)
+        } catch (ignored: Throwable) {
+            null
         }
-        if (view == null) {
-            // Unknown / framework-private tag: let the platform build it.
-            return null
-        }
+        val view = delegated ?: createView(name, context, attrs) ?: return null
         try {
             bind(view, attrs)
         } catch (ignored: Throwable) {
             // Theming is best effort; a broken binding must never break inflation.
         }
         return view
+    }
+
+    private fun createView(name: String, context: Context, attrs: AttributeSet): View? {
+        for (prefix in PREFIXES) {
+            try {
+                val created = inflater.createView(name, prefix, attrs)
+                if (created != null) {
+                    return created
+                }
+            } catch (ignored: Throwable) {
+                // Try the next prefix.
+            }
+        }
+        return null
     }
 
     private fun bind(view: View, attrs: AttributeSet) {
@@ -117,11 +129,23 @@ internal class ThemeFactory(
             }
         }
 
-        val backgroundTint = attrs.getAttributeResourceValue(NS, "backgroundTint", 0)
-        if (backgroundTint != 0) {
-            val color = colorRoles[backgroundTint]
-            if (color != null) {
-                view.backgroundTintList = ColorStateList.valueOf(color)
+        val backgroundTint = colorRoles[
+            attrs.getAttributeResourceValue(NS, "backgroundTint", 0)
+        ] ?: colorRoles[
+            attrs.getAttributeResourceValue(NS_APP, "backgroundTint", 0)
+        ]
+        if (backgroundTint != null) {
+            view.backgroundTintList = ColorStateList.valueOf(backgroundTint)
+        }
+
+        if (view is MaterialCardView) {
+            val cardBg = colorRoles[
+                attrs.getAttributeResourceValue(NS_APP, "cardBackgroundColor", 0)
+            ]
+            if (cardBg != null) {
+                view.setCardBackgroundColor(cardBg)
+            } else {
+                view.setCardBackgroundColor(palette.card)
             }
         }
 
@@ -138,6 +162,7 @@ internal class ThemeFactory(
 
         if (view is ImageView) {
             val tint = colorRoles[attrs.getAttributeResourceValue(NS, "tint", 0)]
+                ?: colorRoles[attrs.getAttributeResourceValue(NS_APP, "tint", 0)]
             if (tint != null) {
                 view.imageTintList = ColorStateList.valueOf(tint)
             }
@@ -171,6 +196,7 @@ internal class ThemeFactory(
 
     companion object {
         private const val NS = "http://schemas.android.com/apk/res/android"
+        private const val NS_APP = "http://schemas.android.com/apk/res-auto"
         private val PREFIXES = arrayOf(
             "android.widget.", "android.view.", "android.webkit.", "android.app.",
         )

@@ -602,6 +602,14 @@ class Scheme private constructor(
             var neutralHue: Double
             var neutralChroma: Double
             when (variant) {
+                Variant.MONOCHROME -> {
+                    p.primary = TonalPalette.fromHueAndChroma(hue, 0.0)
+                    p.secondary = TonalPalette.fromHueAndChroma(hue, 0.0)
+                    p.tertiary = TonalPalette.fromHueAndChroma(hue, 0.0)
+                    p.neutral = TonalPalette.fromHueAndChroma(hue, 0.0)
+                    p.neutralVariant = TonalPalette.fromHueAndChroma(hue, 0.0)
+                    p.error = TonalPalette.fromHueAndChroma(errorHue2025(source), 0.0)
+                }
                 Variant.NEUTRAL -> {
                     p.primary = TonalPalette.fromHueAndChroma(hue, if (Hct.isBlue(hue)) 12.0 else 8.0)
                     p.secondary = TonalPalette.fromHueAndChroma(hue, if (Hct.isBlue(hue)) 6.0 else 4.0)
