@@ -165,11 +165,13 @@ class LicensesActivity : AppCompatActivity() {
     private fun showLicenseDialog(title: String, rawRes: Int) {
         val text = readRawText(rawRes)
         try {
-            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
-                .setTitle(title)
-                .setMessage(text)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
+            ThemeSupport.withoutPalettePainting {
+                MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
+                    .setTitle(title)
+                    .setMessage(text)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
         } catch (t: Throwable) {
             // Never let a license viewer take the screen down.
             Toast.makeText(this, t.message ?: "dialog failed", Toast.LENGTH_LONG).show()

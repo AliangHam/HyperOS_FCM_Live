@@ -184,15 +184,17 @@ class AboutActivity : AppCompatActivity() {
                         ).show()
                         return@runOnUiThread
                     }
-                    MaterialAlertDialogBuilder(this@AboutActivity)
-                        .setMessage(getString(R.string.update_found, latestVersion))
-                        .setPositiveButton(R.string.update_open) { _, _ ->
-                            UpdateChecker.clearBadge(this@AboutActivity)
-                            showUpdateBadge(false)
-                            openUrl(downloadUrl)
-                        }
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show()
+                    ThemeSupport.withoutPalettePainting {
+                        MaterialAlertDialogBuilder(this@AboutActivity)
+                            .setMessage(getString(R.string.update_found, latestVersion))
+                            .setPositiveButton(R.string.update_open) { _, _ ->
+                                UpdateChecker.clearBadge(this@AboutActivity)
+                                showUpdateBadge(false)
+                                openUrl(downloadUrl)
+                            }
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show()
+                    }
                 }
             }
 

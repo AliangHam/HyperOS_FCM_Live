@@ -86,6 +86,12 @@ internal class ThemeFactory(
         context: Context,
         attrs: AttributeSet
     ): View? {
+        // MaterialAlertDialog / AppCompat dialog chrome cannot survive our
+        // stand-in views (Binary XML inflation). Callers pause this factory
+        // around dialog show(); during that window the platform inflates alone.
+        if (paused) {
+            return null
+        }
         // Prefer the existing (AppCompat) factory so platform widgets keep
         // their compatibility wrappers; we only repaint afterwards.
         val delegated = try {
@@ -180,6 +186,7 @@ internal class ThemeFactory(
             } else {
                 view.setCardBackgroundColor(palette.card)
             }
+            view.rippleColor = ColorStateList.valueOf(palette.ripple)
         }
 
         if (view is TextView) {
@@ -235,6 +242,14 @@ internal class ThemeFactory(
             "android.widget.", "android.view.", "android.webkit.", "android.app.",
         )
 
+        /**
+         * When true, every tag falls through to the platform inflater.
+         * Used around MaterialAlertDialog inflation.
+         */
+        @Volatile
+        @JvmStatic
+        var paused: Boolean = false
+
         /** Solid rounded rectangle, used for card backgrounds built in code. */
         @JvmStatic
         fun roundRect(context: Context, color: Int, radiusDp: Float): Drawable {
@@ -257,6 +272,7 @@ internal class ThemeFactory(
             if (root is MaterialCardView) {
                 try {
                     root.setCardBackgroundColor(palette.card)
+                    root.rippleColor = ColorStateList.valueOf(palette.ripple)
                 } catch (ignored: Throwable) {
                     // Best effort.
                 }

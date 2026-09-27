@@ -59,7 +59,7 @@ class AppPalette internal constructor(s: Scheme, dark: Boolean, amoled: Boolean)
     val tooltipBg: Int
     @JvmField
     val tooltipText: Int
-    /** Accent ripple: primary at 24% alpha, matching the old md_popup_item_ripple. */
+    /** Neutral press ripple: onSurface at low alpha, not the accent hue. */
     @JvmField
     val ripple: Int
 
@@ -106,7 +106,10 @@ class AppPalette internal constructor(s: Scheme, dark: Boolean, amoled: Boolean)
         popupBg = pageBg
         tooltipBg = withAlpha(inverseSurface, 0xE6)
         tooltipText = inverseOnSurface
-        ripple = withAlpha(primary, 0x3D)
+        // Grey state layer (onSurface @ ~16%): accent ripples read as a
+        // color-style surprise on Neutral / Vibrant / etc. A neutral wash
+        // stays quiet on every palette style.
+        ripple = withAlpha(onSurface, 0x29)
     }
 
     private companion object {

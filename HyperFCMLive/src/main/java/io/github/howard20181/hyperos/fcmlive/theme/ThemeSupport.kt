@@ -130,6 +130,22 @@ object ThemeSupport {
     }
 
     /**
+     * Inflate [block] without [ThemeFactory] stand-ins. MaterialAlertDialog
+     * (and AppCompat dialog chrome) blow up with "Binary XML file line #…"
+     * when our factory feeds it framework replacements.
+     */
+    @JvmStatic
+    fun <T> withoutPalettePainting(block: () -> T): T {
+        val previous = ThemeFactory.paused
+        ThemeFactory.paused = true
+        try {
+            return block()
+        } finally {
+            ThemeFactory.paused = previous
+        }
+    }
+
+    /**
      * setContentView runs after this method, so card painting is deferred to
      * the first layout pass. Covers MaterialCardViews the inflater built
      * without going through [ThemeFactory].

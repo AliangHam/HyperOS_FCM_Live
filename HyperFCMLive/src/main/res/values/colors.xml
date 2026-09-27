@@ -55,7 +55,7 @@
 
     <!-- Overflow menu: the page colour, so the menu and the page agree. -->
     <color name="md_popup_menu_bg">#F2F2F3</color>
-    <color name="md_popup_item_ripple">#3D8B4A5A</color>
+    <color name="md_popup_item_ripple">#29000000</color>
 
     <!-- Hover state layer: on-surface at 8%. -->
     <color name="md_state_hover">#1423191B</color>
