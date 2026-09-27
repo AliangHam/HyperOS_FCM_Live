@@ -1,77 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Color foreground: bubble with lower-left tail + wrapping broadcast arcs. Glyph centered at (54,54). -->
+<!-- Color foreground: bubble with lower-left tail + wrapping broadcast arcs.
+     Group scale keeps all strokes inside the Adaptive Icon 66dp safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 左侧广播波纹（圆弧包裹气泡） -->
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M23,36 A36,36 0 0,0 23,72"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="6"
-        android:strokeLineCap="round" />
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M32,40 A28,28 0 0,0 32,68"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="6"
-        android:strokeLineCap="round" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.82"
+        android:scaleY="0.82">
 
-    <!-- 右侧广播波纹（圆弧包裹气泡） -->
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M85,36 A36,36 0 0,1 85,72"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="6"
-        android:strokeLineCap="round" />
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M76,40 A28,28 0 0,1 76,68"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="6"
-        android:strokeLineCap="round" />
+        <!-- 左侧广播波纹（圆弧包裹气泡） -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M23,36 A36,36 0 0,0 23,72"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M32,40 A28,28 0 0,0 32,68"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round" />
 
-    <!-- 中央消息气泡（尖端朝左下） -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="
-            M38,49
-            C38,45.7 40.7,43 44,43
-            L64,43
-            C67.3,43 70,45.7 70,49
-            L70,59
-            C70,62.3 67.3,65 64,65
-            L52,65
-            L42,73
-            L44,65
-            L44,65
-            C40.7,65 38,62.3 38,59
-            Z" />
+        <!-- 右侧广播波纹（圆弧包裹气泡） -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M85,36 A36,36 0 0,1 85,72"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M76,40 A28,28 0 0,1 76,68"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round" />
 
-    <!-- 消息内容 -->
-    <path
-        android:fillColor="#2979FF"
-        android:pathData="
-            M44,48
-            L64,48
-            C65.1,48 66,48.9 66,50
-            C66,51.1 65.1,52 64,52
-            L44,52
-            C42.9,52 42,51.1 42,50
-            C42,48.9 42.9,48 44,48
-            Z" />
-    <path
-        android:fillColor="#2979FF"
-        android:pathData="
-            M44,55
-            L64,55
-            C65.1,55 66,55.9 66,57
-            C66,58.1 65.1,59 64,59
-            L44,59
-            C42.9,59 42,58.1 42,57
-            C42,55.9 42.9,55 44,55
-            Z" />
+        <!-- 中央消息气泡（尖端朝左下） -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="
+                M38,49
+                C38,45.7 40.7,43 44,43
+                L64,43
+                C67.3,43 70,45.7 70,49
+                L70,59
+                C70,62.3 67.3,65 64,65
+                L52,65
+                L42,73
+                L44,65
+                L44,65
+                C40.7,65 38,62.3 38,59
+                Z" />
+
+        <!-- 消息内容 -->
+        <path
+            android:fillColor="#2979FF"
+            android:pathData="
+                M44,48
+                L64,48
+                C65.1,48 66,48.9 66,50
+                C66,51.1 65.1,52 64,52
+                L44,52
+                C42.9,52 42,51.1 42,50
+                C42,48.9 42.9,48 44,48
+                Z" />
+        <path
+            android:fillColor="#2979FF"
+            android:pathData="
+                M44,55
+                L64,55
+                C65.1,55 66,55.9 66,57
+                C66,58.1 65.1,59 64,59
+                L44,59
+                C42.9,59 42,58.1 42,57
+                C42,55.9 42.9,55 44,55
+                Z" />
+    </group>
 </vector>
