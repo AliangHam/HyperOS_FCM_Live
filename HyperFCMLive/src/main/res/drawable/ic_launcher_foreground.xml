@@ -1,56 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Color foreground: message bubble + broadcast ripples. Glyph centered at (54,54). -->
+<!-- Color foreground: bubble with lower-left tail + wrapping broadcast arcs. Glyph centered at (54,54). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 左侧广播波纹 -->
+    <!-- 左侧广播波纹（圆弧包裹气泡） -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="
-            M24,43
-            C21,46 20,50 20,54
-            C20,58 21,62 24,65
-            L27,62
-            C25,59 25,56 25,54
-            C25,52 25,49 27,46
-            Z" />
+        android:fillColor="#00000000"
+        android:pathData="M23,36 A36,36 0 0,0 23,72"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="
-            M33,46
-            C31,48 29,51 29,54
-            C29,57 31,60 33,62
-            L36,60
-            C34,58 34,56 34,54
-            C34,52 34,50 36,48
-            Z" />
+        android:fillColor="#00000000"
+        android:pathData="M32,40 A28,28 0 0,0 32,68"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
 
-    <!-- 右侧广播波纹 -->
+    <!-- 右侧广播波纹（圆弧包裹气泡） -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="
-            M84,43
-            C87,46 88,50 88,54
-            C88,58 87,62 84,65
-            L81,62
-            C83,59 83,56 83,54
-            C83,52 83,49 81,46
-            Z" />
+        android:fillColor="#00000000"
+        android:pathData="M85,36 A36,36 0 0,1 85,72"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="
-            M75,46
-            C77,48 79,51 79,54
-            C79,57 77,60 75,62
-            L72,60
-            C74,58 74,56 74,54
-            C74,52 74,50 72,48
-            Z" />
+        android:fillColor="#00000000"
+        android:pathData="M76,40 A28,28 0 0,1 76,68"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
 
-    <!-- 中央消息气泡（几何中心 54,54；尾巴居中） -->
+    <!-- 中央消息气泡（尖端朝左下） -->
     <path
         android:fillColor="#FFFFFFFF"
         android:pathData="
@@ -60,9 +44,9 @@
             C67.3,43 70,45.7 70,49
             L70,59
             C70,62.3 67.3,65 64,65
-            L55,65
-            L54,70
-            L53,65
+            L52,65
+            L42,73
+            L44,65
             L44,65
             C40.7,65 38,62.3 38,59
             Z" />
