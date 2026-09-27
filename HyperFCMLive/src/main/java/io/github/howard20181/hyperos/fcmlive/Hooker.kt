@@ -178,6 +178,11 @@ class Hooker : XposedModule() {
             } catch (t: Throwable) {
                 log(Log.ERROR, TAG, "Failed to hook NoRestrictList", t)
             }
+            try {
+                hookScenarioCompiler(classLoader)
+            } catch (t: Throwable) {
+                log(Log.ERROR, TAG, "Failed to hook ScenarioCompiler", t)
+            }
         }
     }
 
@@ -879,7 +884,8 @@ class Hooker : XposedModule() {
 
     /**
      * Read Settings.System.MILLET_NO_RESTRICT_APP and append GMS when missing.
-     * Preserves every existing entry and ordering.
+     * Preserves every existing entry and ordering. After a repair, triggers
+     * P4 recovery so an already-frozen GMS gets a chance to reconnect.
      */
     private fun ensureGmsInMilletSetting() {
         val context = getSystemContext() ?: getPowerKeeperContext() ?: return
@@ -895,6 +901,37 @@ class Hooker : XposedModule() {
         }
         android.provider.Settings.System.putString(resolver, MILLET_NO_RESTRICT_APP_KEY, updated)
         log(Log.INFO, TAG, "MILLET_NO_RESTRICT_APP: appended GMS (was: $raw)")
+        // P4: if GMS was frozen during the missing-entry window, nudge it awake.
+        recoverGmsConnection(context)
+    }
+
+    /**
+     * P4: ask GMS to re-establish its FCM connection and optionally un-freeze.
+     *
+     * Both actions are outbound IPC TO GMS (broadcast + content query), not
+     * hooks inside GMS. The Chimera provider query is the same trick the
+     * Shizuku reference projects use: a content query that causes GMS to start
+     * if its process is frozen or stopped.
+     */
+    private fun recoverGmsConnection(context: Context) {
+        try {
+            val intent = Intent(ACTION_GCM_RECONNECT)
+            intent.setPackage(GMS_PACKAGE_NAME)
+            context.sendBroadcast(intent)
+            log(Log.INFO, TAG, "Sent GCM_RECONNECT to $GMS_PACKAGE_NAME")
+        } catch (t: Throwable) {
+            log(Log.WARN, TAG, "Failed to send GCM_RECONNECT", t)
+        }
+        try {
+            val uri = android.net.Uri.parse(CHIMERA_PROVIDER_URI)
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.close()
+            log(Log.INFO, TAG, "Chimera provider query completed")
+        } catch (t: Throwable) {
+            // Expected when GMS is still frozen or the provider is not exported
+            // on this build. Not fatal — the broadcast above may still work.
+            log(Log.WARN, TAG, "Chimera provider query failed (non-fatal)", t)
+        }
     }
 
     /**
@@ -918,6 +955,65 @@ class Hooker : XposedModule() {
             }
         } catch (ignored: Throwable) {
             null
+        }
+    }
+
+    /**
+     * P3: force GMS's compiled scenario to 8 (noRestrict) instead of 0.
+     *
+     * fillScenarioContent() special-cases GmsCoreUtils.isGmsCoreApp: a
+     * miuiAuto row becomes scenario 0 for GMS but scenario 2 for normal apps.
+     * Scenario 0 makes isNoRestrict() return true (so older code thinks GMS is
+     * unrestricted) yet dealNoRestrictApp() only queries the literal
+     * bgControl="noRestrict" rows — so GMS never enters MILLET_NO_RESTRICT_APP.
+     *
+     * Rewriting scenario 0 → 8 for GMS makes the compiled profile match the
+     * "noRestrict" scenario that a normal app gets when the user selects
+     * "Unrestricted", aligning UI / AOSP DeviceIdle / private policy state.
+     *
+     * Field layout (verified from OS3/OS4 PowerKeeper DEX):
+     *   PowerKeeperAppConfigure.pkg : String
+     *   PowerKeeperAppConfigure.scenario : int
+     *
+     * OS3 fillScenarioContent(Context,int,PowerKeeperAppConfigure,
+     *   UserConfigureHelper,String,List,List)V
+     * OS4 adds a trailing Map parameter.
+     */
+    private fun hookScenarioCompiler(classLoader: ClassLoader) {
+        val configureClass =
+            classLoader.loadClass("com.miui.powerkeeper.provider.PowerKeeperAppConfigure")
+        val pkgField = configureClass.getDeclaredField("pkg")
+        pkgField.isAccessible = true
+        val scenarioField = configureClass.getDeclaredField("scenario")
+        scenarioField.isAccessible = true
+
+        // OS3: 7 params; OS4: 8 params (extra Map). PowerKeeperAppConfigure is arg 2.
+        for (paramCount in intArrayOf(7, 8)) {
+            val method = configureClass.declaredMethods.firstOrNull { m ->
+                m.name == "fillScenarioContent" && m.parameterCount == paramCount
+            } ?: continue
+
+            hookE(method).intercept { chain: XposedInterface.Chain ->
+                chain.proceed()
+                try {
+                    val cfg = chain.getArg(2) ?: return@intercept null
+                    val pkg = pkgField.get(cfg) as? String ?: return@intercept null
+                    if (GMS_PACKAGE_NAME != pkg) return@intercept null
+                    val scenario = scenarioField.getInt(cfg)
+                    if (scenario == SCENARIO_MUI_AUTO_GMS) {
+                        scenarioField.setInt(cfg, SCENARIO_NO_RESTRICT)
+                        log(
+                            Log.INFO, TAG,
+                            "P3: rewrote GMS scenario $SCENARIO_MUI_AUTO_GMS → $SCENARIO_NO_RESTRICT"
+                        )
+                    }
+                } catch (t: Throwable) {
+                    log(Log.ERROR, TAG, "P3: failed to rewrite GMS scenario", t)
+                }
+                null
+            }
+            deoptimize(method)
+            log(Log.INFO, TAG, "PowerKeeperAppConfigure#fillScenarioContent($paramCount args) hooked for P3")
         }
     }
 
@@ -1565,6 +1661,14 @@ class Hooker : XposedModule() {
         private const val GMS_PACKAGE_NAME = "com.google.android.gms"
         private const val GMS_PERSISTENT_PROCESS_NAME = "com.google.android.gms.persistent"
         private const val MILLET_NO_RESTRICT_APP_KEY = "MILLET_NO_RESTRICT_APP"
+
+        /** P3 scenario constants (from live PowerKeeper dumps). */
+        private const val SCENARIO_MUI_AUTO_GMS = 0   // isGmsCoreApp + miuiAuto
+        private const val SCENARIO_NO_RESTRICT = 8    // bgControl = noRestrict
+
+        /** P4 recovery actions (outbound IPC to GMS, not hooks). */
+        private const val ACTION_GCM_RECONNECT = "com.google.android.intent.action.GCM_RECONNECT"
+        private const val CHIMERA_PROVIDER_URI = "content://com.google.android.gms.chimera"
 
         private const val ALLOWLIST_STALE_MS = 10_000L
         private const val ALLOWLIST_RELOAD_MIN_MS = 500L
