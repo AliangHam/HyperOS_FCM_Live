@@ -1,27 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher glyph: a wake/push bell with a keep-alive pulse line. -->
+<!-- Color foreground: message bubble + broadcast ripples. 108dp canvas, safe zone centered. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:scaleX="0.58"
-        android:scaleY="0.58"
-        android:pivotX="54"
-        android:pivotY="52">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M54,30c-11,0 -20,9 -20,20v12l-5,9h50l-5,-9v-12c0,-11 -9,-20 -20,-20z" />
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M47,76a7,7 0,0 0,14 0z" />
-    </group>
+
+    <!-- 左侧广播波纹 -->
     <path
-        android:pathData="M30,90l8,0 5,-10 7,20 7,-16 5,6 10,0"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="
+            M29,29
+            C25,34 23,41 23,54
+            C23,67 25,74 29,79
+            L35,75
+            C32,70 31,63 31,54
+            C31,45 32,38 35,33
+            Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="
+            M39,36
+            C36,41 35,47 35,54
+            C35,61 36,67 39,72
+            L45,68
+            C43,64 42,59 42,54
+            C42,49 43,44 45,40
+            Z" />
+
+    <!-- 右侧广播波纹 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="
+            M79,29
+            C83,34 85,41 85,54
+            C85,67 83,74 79,79
+            L73,75
+            C76,70 77,63 77,54
+            C77,45 76,38 73,33
+            Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="
+            M69,36
+            C72,41 73,47 73,54
+            C73,61 72,67 69,72
+            L63,68
+            C65,64 66,59 66,54
+            C66,49 65,44 63,40
+            Z" />
+
+    <!-- 中央消息气泡 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="
+            M42,40
+            C42,36.7 44.7,34 48,34
+            L60,34
+            C63.3,34 66,36.7 66,40
+            L66,58
+            C66,61.3 63.3,64 60,64
+            L53,64
+            L47,70
+            L47,64
+            L48,64
+            C44.7,64 42,61.3 42,58
+            Z" />
+
+    <!-- 消息内容 -->
+    <path
+        android:fillColor="#2979FF"
+        android:pathData="
+            M48,44
+            L60,44
+            C61.1,44 62,44.9 62,46
+            C62,47.1 61.1,48 60,48
+            L48,48
+            C46.9,48 46,47.1 46,46
+            C46,44.9 46.9,44 48,44
+            Z" />
+    <path
+        android:fillColor="#2979FF"
+        android:pathData="
+            M48,51
+            L60,51
+            C61.1,51 62,51.9 62,53
+            C62,54.1 61.1,55 60,55
+            L48,55
+            C46.9,55 46,54.1 46,53
+            C46,51.9 46.9,51 48,51
+            Z" />
 </vector>
