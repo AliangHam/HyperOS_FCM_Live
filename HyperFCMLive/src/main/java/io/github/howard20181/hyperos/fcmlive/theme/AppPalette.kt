@@ -104,8 +104,15 @@ class AppPalette internal constructor(s: Scheme, dark: Boolean, amoled: Boolean)
         // rather than as a menu. The popup keeps its own elevation shadow, so
         // it still lifts off the page without needing a different fill.
         popupBg = pageBg
-        tooltipBg = withAlpha(inverseSurface, 0xE6)
-        tooltipText = inverseOnSurface
+        tooltipBg = if (dark) {
+            // Dark mode: inverse bubble (light surface), solid for clarity.
+            inverseSurface
+        } else {
+            // Light mode: solid near-black bubble + pure white text. The old
+            // 0xE6 inverse wash was hard to read on pale page/card surfaces.
+            0xFF1C1B1F.toInt()
+        }
+        tooltipText = if (dark) inverseOnSurface else 0xFFFFFFFF.toInt()
         // Grey state layer (onSurface @ ~16%): accent ripples read as a
         // color-style surprise on Neutral / Vibrant / etc. A neutral wash
         // stays quiet on every palette style.

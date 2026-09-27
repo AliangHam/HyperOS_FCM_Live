@@ -50,8 +50,8 @@
     <color name="md_hint_light">#7A656A</color>
 
     <!-- Inverse surface tooltips (always contrast against the app surface). -->
-    <color name="md_tooltip_bg">#E62D2D30</color>
-    <color name="md_tooltip_text">#F4EFF4</color>
+    <color name="md_tooltip_bg">#FF1C1B1F</color>
+    <color name="md_tooltip_text">#FFFFFFFF</color>
 
     <!-- Overflow menu: the page colour, so the menu and the page agree. -->
     <color name="md_popup_menu_bg">#F2F2F3</color>

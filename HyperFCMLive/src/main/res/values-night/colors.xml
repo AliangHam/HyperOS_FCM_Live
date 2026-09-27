@@ -45,8 +45,8 @@
     <color name="md_hint_light">#9A8288</color>
 
     <!-- Inverse: light bubble on dark surface. -->
-    <color name="md_tooltip_bg">#E6E6E0E5</color>
-    <color name="md_tooltip_text">#322F37</color>
+    <color name="md_tooltip_bg">#FFE6E0E5</color>
+    <color name="md_tooltip_text">#FF322F37</color>
 
     <!-- Overflow menu: the page colour. -->
     <color name="md_popup_menu_bg">#0E0E10</color>
