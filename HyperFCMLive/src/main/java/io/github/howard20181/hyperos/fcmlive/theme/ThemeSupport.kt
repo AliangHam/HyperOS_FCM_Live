@@ -190,17 +190,30 @@ object ThemeSupport {
     /**
      * Install the palette painter on the Activity's LayoutInflater.
      *
-     * Only use the public setter. Force-replacing AppCompat's factory via
-     * reflection made list/dialog inflation fragile (Binary XML crashes on
-     * some ROMs, including Android 16). If AppCompat already installed a
-     * factory, skip painting that window instead of hijacking it.
+     * AppCompat usually already owns the factory, so the public setter throws.
+     * Chain behind it via reflection (mFactory2) so we still repaint XML roles;
+     * [ThemeFactory] never invents androidx / Button stand-ins (that was the
+     * Binary XML crash). Dialogs call [withoutPalettePainting].
      */
     private fun installFactory(activity: Activity, palette: AppPalette) {
         val inflater = activity.layoutInflater
         try {
             inflater.setFactory2(ThemeFactory(activity, inflater, palette))
+            return
         } catch (ignored: Throwable) {
-            // Factory already installed (AppCompat) — leave the platform factory.
+            // AppCompat factory already installed.
+        }
+        try {
+            val factory2Field = LayoutInflater::class.java.getDeclaredField("mFactory2")
+            val factoryField = LayoutInflater::class.java.getDeclaredField("mFactory")
+            factory2Field.isAccessible = true
+            factoryField.isAccessible = true
+            val previous = factory2Field.get(inflater) as? LayoutInflater.Factory2
+            val factory = ThemeFactory(activity, inflater, palette, previous)
+            factory2Field.set(inflater, factory)
+            factoryField.set(inflater, factory)
+        } catch (ignored: Throwable) {
+            // Hidden-API block: layouts fall back to static / system colors.
         }
     }
 

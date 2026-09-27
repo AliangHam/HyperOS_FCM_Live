@@ -108,18 +108,20 @@ internal class ThemeFactory(
             return delegated
         }
         // No delegate (or it declined the tag).
-        // - Short names (FrameLayout, TextView, ImageButton, …) are the
-        //   hand-tuned screens and must be created + painted, otherwise
-        //   @color/md_* falls through to system_accent* and looks monochrome.
         // - Fully-qualified androidx.* is dialog/AppCompat chrome: never invent
-        //   a stand-in, let the platform inflate it (the license-dialog crash).
-        // - Fully-qualified Material (card / FAB) can be built and painted.
+        //   a stand-in (license-dialog Binary XML crash).
+        // - Button: dialog actions need AppCompat/Material only.
+        // - Material (card / FAB) can be built and painted.
+        // - Short names are only the simple widgets our screens use; anything
+        //   else falls through to the platform inflater.
         val view = when {
+            paused -> return null
             name.startsWith("androidx.") -> return null
             name.contains('.') && !name.startsWith(MATERIAL_PREFIX) -> return null
             name.startsWith(MATERIAL_PREFIX) -> createFullClassView(name, context, attrs)
-            name == "Button" -> return null // dialog action: AppCompat/Material only
-            else -> createView(name, context, attrs)
+            name == "Button" -> return null
+            name in SAFE_SHORT_NAMES -> createView(name, context, attrs)
+            else -> return null
         } ?: return null
         try {
             bind(view, attrs)
@@ -240,6 +242,14 @@ internal class ThemeFactory(
         private const val MATERIAL_PREFIX = "com.google.android.material."
         private val PREFIXES = arrayOf(
             "android.widget.", "android.view.", "android.webkit.", "android.app.",
+        )
+
+        /** Only these short tags may be built when AppCompat declines them. */
+        private val SAFE_SHORT_NAMES = setOf(
+            "View", "FrameLayout", "LinearLayout", "RelativeLayout",
+            "TextView", "ImageView", "ImageButton", "ImageView",
+            "ScrollView", "HorizontalScrollView", "Space",
+            "ListView", "SearchView", "ProgressBar",
         )
 
         /**
