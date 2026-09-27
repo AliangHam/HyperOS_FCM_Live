@@ -346,7 +346,17 @@ class Hooker : XposedModule() {
         val deferBroadcastMethod = DomesticPolicyManagerClass.getDeclaredMethod(
             "deferBroadcast", String::class.java
         )
-        hookE(deferBroadcastMethod).intercept { _: XposedInterface.Chain -> false }
+        hookE(deferBroadcastMethod).intercept { chain: XposedInterface.Chain ->
+            // Only bypass deferral for GMS/FCM-related actions (same set as
+            // deferBroadcastForMiui). Lets every other broadcast follow the
+            // normal deferral policy — aligned with strict-mode's minimal
+            // intervention philosophy.
+            val action = chain.getArg(0) as? String
+            if (action != null && CN_DEFER_BROADCAST.contains(action)) {
+                return@intercept false
+            }
+            chain.proceed()
+        }
         deoptimize(deferBroadcastMethod)
     }
 
@@ -906,30 +916,34 @@ class Hooker : XposedModule() {
     }
 
     /**
-     * P4: ask GMS to re-establish its FCM connection and optionally un-freeze.
+     * P4: ask GMS/GSF to re-establish its FCM connection and un-freeze.
      *
-     * Both actions are outbound IPC TO GMS (broadcast + content query), not
-     * hooks inside GMS. The Chimera provider query is the same trick the
-     * Shizuku reference projects use: a content query that causes GMS to start
-     * if its process is frozen or stopped.
+     * All actions are outbound IPC TO GMS/GSF (broadcasts + content query),
+     * not hooks inside GMS. Inspired by FCMGuard's heartbeat approach:
+     * GCM_RECONNECT alone may miss the MCS/GTalk reconnect paths on some
+     * builds, so GTALK_HEARTBEAT and MCS_HEARTBEAT are also sent. GSF
+     * (com.google.android.gsf) participates in the FCM transport chain
+     * alongside GMS and is included as a target.
      */
     private fun recoverGmsConnection(context: Context) {
-        try {
-            val intent = Intent(ACTION_GCM_RECONNECT)
-            intent.setPackage(GMS_PACKAGE_NAME)
-            context.sendBroadcast(intent)
-            log(Log.INFO, TAG, "Sent GCM_RECONNECT to $GMS_PACKAGE_NAME")
-        } catch (t: Throwable) {
-            log(Log.WARN, TAG, "Failed to send GCM_RECONNECT", t)
+        for (target in arrayOf(GMS_PACKAGE_NAME, GSF_PACKAGE_NAME)) {
+            for (action in RECOVERY_BROADCAST_ACTIONS) {
+                try {
+                    val intent = Intent(action)
+                    intent.setPackage(target)
+                    context.sendBroadcast(intent)
+                } catch (t: Throwable) {
+                    log(Log.WARN, TAG, "Failed to send $action to $target", t)
+                }
+            }
         }
+        log(Log.INFO, TAG, "P4: recovery broadcasts sent to GMS+GSF")
         try {
             val uri = android.net.Uri.parse(CHIMERA_PROVIDER_URI)
             val cursor = context.contentResolver.query(uri, null, null, null, null)
             cursor?.close()
             log(Log.INFO, TAG, "Chimera provider query completed")
         } catch (t: Throwable) {
-            // Expected when GMS is still frozen or the provider is not exported
-            // on this build. Not fatal — the broadcast above may still work.
             log(Log.WARN, TAG, "Chimera provider query failed (non-fatal)", t)
         }
     }
@@ -1666,8 +1680,16 @@ class Hooker : XposedModule() {
         private const val SCENARIO_MUI_AUTO_GMS = 0   // isGmsCoreApp + miuiAuto
         private const val SCENARIO_NO_RESTRICT = 8    // bgControl = noRestrict
 
-        /** P4 recovery actions (outbound IPC to GMS, not hooks). */
+        /** P4 recovery actions (outbound IPC to GMS/GSF, not hooks). */
         private const val ACTION_GCM_RECONNECT = "com.google.android.intent.action.GCM_RECONNECT"
+        private const val ACTION_GTALK_HEARTBEAT = "com.google.android.intent.action.GTALK_HEARTBEAT"
+        private const val ACTION_MCS_HEARTBEAT = "com.google.android.intent.action.MCS_HEARTBEAT"
+        private const val GSF_PACKAGE_NAME = "com.google.android.gsf"
+        private val RECOVERY_BROADCAST_ACTIONS = arrayOf(
+            ACTION_GCM_RECONNECT,
+            ACTION_GTALK_HEARTBEAT,
+            ACTION_MCS_HEARTBEAT
+        )
         private const val CHIMERA_PROVIDER_URI = "content://com.google.android.gms.chimera"
 
         private const val ALLOWLIST_STALE_MS = 10_000L
