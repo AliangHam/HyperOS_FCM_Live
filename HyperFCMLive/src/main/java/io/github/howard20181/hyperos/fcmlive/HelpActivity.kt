@@ -30,6 +30,12 @@ class HelpActivity : AppCompatActivity() {
 
         val back = findViewById<View>(R.id.btn_back)
         back?.setOnClickListener { finish() }
+
+        findViewById<androidx.compose.ui.platform.ComposeView>(R.id.help_content)?.setContent {
+            io.github.howard20181.hyperos.fcmlive.theme.HyperFCMLiveTheme {
+                io.github.howard20181.hyperos.fcmlive.ui.HelpScreen()
+            }
+        }
     }
 
     /**
