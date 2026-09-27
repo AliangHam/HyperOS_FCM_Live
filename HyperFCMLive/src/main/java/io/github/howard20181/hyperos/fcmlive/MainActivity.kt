@@ -262,6 +262,9 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
 
         val list = findViewById<View>(R.id.app_list)
+        // Stretch overscroll (Android 12+): pull past the edge and the list
+        // itself bends — never a glow that fights the page background.
+        list?.overScrollMode = View.OVER_SCROLL_ALWAYS
         if (list is ListView) {
             list.adapter = adapter
         }

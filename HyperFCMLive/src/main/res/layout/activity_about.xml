@@ -63,10 +63,8 @@
             android:tint="@color/md_icon_tint" />
     </LinearLayout>
 
-    <!-- The scroll view itself carries the page background as well, so the
-         overscroll edge effect and the gesture-indicator strip at the bottom
-         can never show a different tone than the page. overScrollMode="never"
-         disables the stretch/glow entirely (API 31+ stretch included). -->
+    <!-- Stretch overscroll (API 31+) bends the content itself; the scroll
+         view still carries the page background so the tone stays uniform. -->
     <ScrollView
         android:id="@+id/about_scroll"
         android:layout_width="match_parent"
@@ -74,7 +72,7 @@
         android:layout_weight="1"
         android:background="@color/md_page_bg"
         android:clipToPadding="false"
-        android:overScrollMode="never">
+        android:overScrollMode="always">
 
         <!-- Bottom safe area is applied to this container at runtime: it is the
              scrollable content, so the last card comes to rest above the

@@ -779,7 +779,7 @@ class AboutActivity : AppCompatActivity() {
 
         val scroll = ScrollView(this)
         scroll.isVerticalScrollBarEnabled = false
-        scroll.overScrollMode = View.OVER_SCROLL_NEVER
+        scroll.overScrollMode = View.OVER_SCROLL_ALWAYS
         scroll.addView(
             rows,
             FrameLayout.LayoutParams(
