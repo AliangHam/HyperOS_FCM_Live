@@ -64,6 +64,7 @@
     <string name="license_view_full_text">点击查看全文</string>
     <string name="license_apache_2">Apache License 2.0</string>
     <string name="license_gpl_3">GPL-3.0</string>
+    <string name="license_mit">MIT License</string>
     <string name="hide_launcher_icon">隐藏桌面图标</string>
     <!-- 语言名一律用原文，两个语言文件里保持完全一致，不要在翻译时改写。 -->    <string name="theme_mode">主题模式</string>
     <string name="palette_style">调色风格</string>

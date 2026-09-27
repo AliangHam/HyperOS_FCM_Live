@@ -51,10 +51,12 @@ class LicensesActivity : AppCompatActivity() {
         val licenseNames = arrayOf(
             getString(R.string.license_apache_2),
             getString(R.string.license_gpl_3),
+            getString(R.string.license_mit),
         )
         val licenseRaw = intArrayOf(
             R.raw.license_apache2,
             R.raw.license_gpl3,
+            R.raw.license_mit,
         )
         for (i in licenseNames.indices) {
             val row = inflater.inflate(R.layout.item_license_dep, list, false)
