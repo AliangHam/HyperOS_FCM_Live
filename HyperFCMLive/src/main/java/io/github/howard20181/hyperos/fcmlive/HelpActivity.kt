@@ -31,9 +31,16 @@ class HelpActivity : AppCompatActivity() {
         val back = findViewById<View>(R.id.btn_back)
         back?.setOnClickListener { finish() }
 
-        findViewById<androidx.compose.ui.platform.ComposeView>(R.id.help_content)?.setContent {
-            io.github.howard20181.hyperos.fcmlive.theme.HyperFCMLiveTheme {
-                io.github.howard20181.hyperos.fcmlive.ui.HelpScreen()
+        val composeView = findViewById<androidx.compose.ui.platform.ComposeView>(R.id.help_content)
+        composeView?.let {
+            // XML @color/md_page_bg is the system accent on API 31+; the inset
+            // padding strip would show that (often grey) while Compose paints
+            // ThemeEngine's pageBg. Force both to the same runtime colour.
+            it.setBackgroundColor(io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine.palette(this).pageBg)
+            it.setContent {
+                io.github.howard20181.hyperos.fcmlive.theme.HyperFCMLiveTheme {
+                    io.github.howard20181.hyperos.fcmlive.ui.HelpScreen()
+                }
             }
         }
     }
