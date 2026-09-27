@@ -48,12 +48,16 @@ jobs:
       - name: Build with Gradle
         # 没有配签名 secret 时显式声明「允许 debug 签名」，否则发布构建会直接失败
         # （避免产出一个用公开 debug 密钥签名的正式包）。
+        # Release 和 Debug 分开编，避免 Compose + R8 把 runner 堆挤爆。
         run: |
+          export GRADLE_OPTS="-Xmx4g"
           if [ -z "${{ secrets.SIGNING_KEY }}" ]; then
             echo "::warning::未配置 SIGNING_KEY，本次产物使用 debug 签名，仅适合内部测试"
-            ./gradlew --no-daemon -PallowDebugSignedRelease :HyperFCMLive:assembleRelease :HyperFCMLive:assembleDebug
+            ./gradlew --no-daemon -PallowDebugSignedRelease :HyperFCMLive:assembleRelease
+            ./gradlew --no-daemon -PallowDebugSignedRelease :HyperFCMLive:assembleDebug
           else
-            ./gradlew --no-daemon :HyperFCMLive:assembleRelease :HyperFCMLive:assembleDebug
+            ./gradlew --no-daemon :HyperFCMLive:assembleRelease
+            ./gradlew --no-daemon :HyperFCMLive:assembleDebug
           fi
 
       - name: Upload release artifact
