@@ -924,54 +924,64 @@ class Hooker : XposedModule() {
     /**
      * P2: Greezer freeze-path safety net in system_server.
      *
-     * Even with MILLET_NO_RESTRICT_APP repaired at the source, a narrow race
-     * remains if Greezer evaluates a freeze before PowerKeeper regenerates the
-     * projection. PolicyMaker.isAllowFreeze() is the shared gate for
-     * PowerStrategyMode (tobg / from system); returning "cannot freeze" for GMS
-     * closes that window and also covers ROMs where the PowerKeeper-side hook
-     * target renames.
+     * Verified against OS3/OS4 miui-services.jar:
+     * - AurogonImmobulusMode.isNoRestrictApp(String)Z  — the exact mNoRestrictAppSet
+     *   check used by both lambda$triggerQuickFreeze$0 and PolicyMaker's filter chain.
+     * - AurogonImmobulusMode.triggerQuickFreeze(I,I)V
+     * - PolicyMaker.isAllowFreeze(I)I  — returns int (CANNOT_FREEZE constant).
+     * - OS4 extra: isNoRestrictFreezeable(String,I)Z.
+     *
+     * All targets live in miui-services.jar (system_server). GMS itself is never
+     * hooked — only the framework-side freeze policy is told to treat GMS as
+     * no-restrict.
      */
     private fun hookGreezerNoRestrict(classLoader: ClassLoader) {
-        // PolicyMaker.isAllowFreeze(uid): deny freeze for GMS.
-        try {
-            val policyMakerClass =
-                classLoader.loadClass("com.miui.server.greeze.power.PolicyMaker")
-            // Probe: return type may be boolean (isAllowFreeze) or int (status code).
-            val isAllowFreezeMethods = policyMakerClass.declaredMethods.filter { m ->
-                m.name == "isAllowFreeze" && m.parameterCount == 1
-            }
-            if (isAllowFreezeMethods.isEmpty()) {
-                logSkip("PolicyMaker#isAllowFreeze absent, skip")
-            } else {
-                for (method in isAllowFreezeMethods) {
-                    method.isAccessible = true
-                    hookE(method).intercept { chain: XposedInterface.Chain ->
-                        val uid = chain.getArg(0)
-                        if (uid is Int && isGmsUid(uid)) {
-                            // "Cannot freeze": boolean false, or int 0 / -1 depending on ROM.
-                            return@intercept skipValueFor(method.returnType)
-                        }
-                        chain.proceed()
-                    }
-                    deoptimize(method)
-                    log(Log.INFO, TAG, "PolicyMaker#isAllowFreeze hooked (${method.returnType.simpleName})")
-                }
-            }
-        } catch (e: ClassNotFoundException) {
-            logSkip("PolicyMaker class absent, skip")
-        } catch (e: Throwable) {
-            log(Log.ERROR, TAG, "Failed to hook PolicyMaker#isAllowFreeze", e)
-        }
-
-        // AurogonImmobulusMode.triggerQuickFreeze(uid, reason): skip GMS.
+        // Primary: isNoRestrictApp(pkg) — boolean, no constant guessing needed.
+        // Returning true means "GMS is in the no-restrict set", so every freeze
+        // path that consults mNoRestrictAppSet (Aurogon quick-freeze and
+        // PowerStrategyMode) skips GMS.
         try {
             val aurogonClass =
                 classLoader.loadClass("com.miui.server.greeze.AurogonImmobulusMode")
+            try {
+                val isNoRestrictAppMethod = aurogonClass.getDeclaredMethod(
+                    "isNoRestrictApp", String::class.java
+                )
+                hookE(isNoRestrictAppMethod).intercept { chain: XposedInterface.Chain ->
+                    val pkg = chain.getArg(0)
+                    if (GMS_PACKAGE_NAME == pkg) {
+                        return@intercept true
+                    }
+                    chain.proceed()
+                }
+                deoptimize(isNoRestrictAppMethod)
+            } catch (e: NoSuchMethodException) {
+                logSkip("AurogonImmobulusMode#isNoRestrictApp absent, skip")
+            }
+
+            // OS4: isNoRestrictFreezeable(pkg, reason) — false means "do not freeze".
+            try {
+                val isNoRestrictFreezeableMethod = aurogonClass.getDeclaredMethod(
+                    "isNoRestrictFreezeable", String::class.java, Int::class.javaPrimitiveType
+                )
+                hookE(isNoRestrictFreezeableMethod).intercept { chain: XposedInterface.Chain ->
+                    val pkg = chain.getArg(0)
+                    if (GMS_PACKAGE_NAME == pkg) {
+                        return@intercept false
+                    }
+                    chain.proceed()
+                }
+                deoptimize(isNoRestrictFreezeableMethod)
+            } catch (e: NoSuchMethodException) {
+                logSkipOtherGeneration("AurogonImmobulusMode#isNoRestrictFreezeable absent, skip")
+            }
+
+            // triggerQuickFreeze(uid, reason) — skip GMS entirely.
             val triggerQuickFreezeMethods = aurogonClass.declaredMethods.filter { m ->
-                m.name == "triggerQuickFreeze" && m.parameterCount >= 1
+                m.name == "triggerQuickFreeze" && m.parameterCount == 2
             }
             if (triggerQuickFreezeMethods.isEmpty()) {
-                logSkip("AurogonImmobulusMode#triggerQuickFreeze absent, skip")
+                logSkip("AurogonImmobulusMode#triggerQuickFreeze(I,I) absent, skip")
             } else {
                 for (method in triggerQuickFreezeMethods) {
                     method.isAccessible = true
@@ -984,12 +994,43 @@ class Hooker : XposedModule() {
                     }
                     deoptimize(method)
                 }
-                log(Log.INFO, TAG, "AurogonImmobulusMode#triggerQuickFreeze hooked (${triggerQuickFreezeMethods.size} overload(s))")
+                log(Log.INFO, TAG, "AurogonImmobulusMode#triggerQuickFreeze hooked")
             }
         } catch (e: ClassNotFoundException) {
             logSkip("AurogonImmobulusMode class absent, skip")
         } catch (e: Throwable) {
-            log(Log.ERROR, TAG, "Failed to hook AurogonImmobulusMode#triggerQuickFreeze", e)
+            log(Log.ERROR, TAG, "Failed to hook AurogonImmobulusMode", e)
+        }
+
+        // PolicyMaker.isAllowFreeze(uid): int return (CANNOT_FREEZE when in the
+        // no-restrict set). Returning 0 / false for GMS closes the PowerStrategyMode
+        // (tobg / from system) window before PowerKeeper regenerates the projection.
+        try {
+            val policyMakerClass =
+                classLoader.loadClass("com.miui.server.greeze.power.PolicyMaker")
+            val isAllowFreezeMethods = policyMakerClass.declaredMethods.filter { m ->
+                m.name == "isAllowFreeze" && m.parameterCount == 1
+            }
+            if (isAllowFreezeMethods.isEmpty()) {
+                logSkip("PolicyMaker#isAllowFreeze absent, skip")
+            } else {
+                for (method in isAllowFreezeMethods) {
+                    method.isAccessible = true
+                    hookE(method).intercept { chain: XposedInterface.Chain ->
+                        val uid = chain.getArg(0)
+                        if (uid is Int && isGmsUid(uid)) {
+                            return@intercept skipValueFor(method.returnType)
+                        }
+                        chain.proceed()
+                    }
+                    deoptimize(method)
+                    log(Log.INFO, TAG, "PolicyMaker#isAllowFreeze hooked (${method.returnType.simpleName})")
+                }
+            }
+        } catch (e: ClassNotFoundException) {
+            logSkip("PolicyMaker class absent, skip")
+        } catch (e: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook PolicyMaker#isAllowFreeze", e)
         }
     }
 
