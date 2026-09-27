@@ -10,8 +10,8 @@
     <group
         android:pivotX="54"
         android:pivotY="54"
-        android:scaleX="0.82"
-        android:scaleY="0.82">
+        android:scaleX="0.76"
+        android:scaleY="0.76">
 
         <!-- 左侧广播波纹（圆弧包裹气泡） -->
         <path
