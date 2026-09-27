@@ -11,19 +11,25 @@ import kotlin.math.min
  * Public int/boolean roles stay `@JvmField` so existing Java call sites keep
  * field access (`palette.primary`) without switching to synthetic getters.
  */
-class AppPalette internal constructor(s: Scheme, dark: Boolean, amoled: Boolean) {
+class AppPalette internal constructor(
+    /** Full Material roles; Compose theme bridge maps these to `ColorScheme`. */
+    @JvmField
+    val scheme: Scheme,
+    dark: Boolean,
+    amoled: Boolean
+) {
 
     /** Raw Material roles, kept for callers that need the full set. */
     @JvmField
-    val primary: Int = s.primary
+    val primary: Int = scheme.primary
     @JvmField
-    val onPrimary: Int = s.onPrimary
+    val onPrimary: Int = scheme.onPrimary
     @JvmField
-    val primaryContainer: Int = s.primaryContainer
+    val primaryContainer: Int = scheme.primaryContainer
     @JvmField
     val surface: Int
     @JvmField
-    val surfaceVariant: Int = s.surfaceVariant
+    val surfaceVariant: Int = scheme.surfaceVariant
     @JvmField
     val surfaceContainerLowest: Int
     @JvmField
@@ -31,17 +37,17 @@ class AppPalette internal constructor(s: Scheme, dark: Boolean, amoled: Boolean)
     @JvmField
     val surfaceContainerHigh: Int
     @JvmField
-    val onSurface: Int = s.onSurface
+    val onSurface: Int = scheme.onSurface
     @JvmField
-    val onSurfaceVariant: Int = s.onSurfaceVariant
+    val onSurfaceVariant: Int = scheme.onSurfaceVariant
     @JvmField
-    val outline: Int = s.outline
+    val outline: Int = scheme.outline
     @JvmField
-    val outlineVariant: Int = s.outlineVariant
+    val outlineVariant: Int = scheme.outlineVariant
     @JvmField
-    val inverseSurface: Int = s.inverseSurface
+    val inverseSurface: Int = scheme.inverseSurface
     @JvmField
-    val inverseOnSurface: Int = s.inverseOnSurface
+    val inverseOnSurface: Int = scheme.inverseOnSurface
 
     /** Semantic aliases used by the layouts. */
     @JvmField
@@ -76,10 +82,10 @@ class AppPalette internal constructor(s: Scheme, dark: Boolean, amoled: Boolean)
             surfaceContainerLow = 0xFF0A0A0A.toInt()
             surfaceContainerHigh = 0xFF141414.toInt()
         } else {
-            surface = s.surface
-            surfaceContainerLowest = s.surfaceContainerLowest
-            surfaceContainerLow = s.surfaceContainerLow
-            surfaceContainerHigh = s.surfaceContainerHigh
+            surface = scheme.surface
+            surfaceContainerLowest = scheme.surfaceContainerLowest
+            surfaceContainerLow = scheme.surfaceContainerLow
+            surfaceContainerHigh = scheme.surfaceContainerHigh
         }
 
         // Light cards use the lowest container tone (near white); dark cards
