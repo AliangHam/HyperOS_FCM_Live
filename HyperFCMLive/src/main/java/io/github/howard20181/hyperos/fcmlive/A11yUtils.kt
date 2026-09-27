@@ -2,6 +2,7 @@ package io.github.howard20181.hyperos.fcmlive
 
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.ImageView
 import android.widget.TextView
@@ -15,23 +16,36 @@ import android.widget.TextView
  */
 object A11yUtils {
 
-    /** Announce a transient message (tooltip opened, menu opened, …). */
+    /**
+     * Android 16 throws IllegalStateException ("Accessibility off") when an
+     * event is sent while the service is disabled. Always gate on the manager.
+     */
+    @JvmStatic
+    private fun a11yEnabled(view: View?): Boolean {
+        val context = view?.context ?: return false
+        val manager = context.getSystemService(AccessibilityManager::class.java) ?: return false
+        return manager.isEnabled
+    }
+
+    /** Announce a transient message (tooltip opened, menu opened, etc.). */
     @JvmStatic
     @Suppress("DEPRECATION")
     fun announce(view: View?, text: CharSequence?) {
-        if (view == null || text.isNullOrEmpty()) {
+        if (view == null || text.isNullOrEmpty() || !a11yEnabled(view)) {
             return
         }
-        // announceForAccessibility + TYPE_ANNOUNCEMENT: still the portable way
-        // to speak a transient message on TalkBack across OEM skins.
-        view.announceForAccessibility(text)
-        val event = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_ANNOUNCEMENT)
-        event.text.add(text)
-        event.className = view.javaClass.name
-        event.packageName = view.context?.packageName
-        view.parent?.requestSendAccessibilityEvent(view, event) ?: view.sendAccessibilityEvent(
-            AccessibilityEvent.TYPE_ANNOUNCEMENT
-        )
+        try {
+            view.announceForAccessibility(text)
+            val event = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_ANNOUNCEMENT)
+            event.text.add(text)
+            event.className = view.javaClass.name
+            event.packageName = view.context?.packageName
+            view.parent?.requestSendAccessibilityEvent(view, event) ?: view.sendAccessibilityEvent(
+                AccessibilityEvent.TYPE_ANNOUNCEMENT
+            )
+        } catch (ignored: Throwable) {
+            // Accessibility must never take the UI down (Android 16 strictness).
+        }
     }
 
     /**
@@ -76,14 +90,12 @@ object A11yUtils {
             override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
                 super.onInitializeAccessibilityNodeInfo(host, info)
                 info.className = "android.widget.CheckBox"
-                // isChecked is the API TalkBack uses for checkable controls.
                 info.isCheckable = true
                 info.isChecked = checked
                 info.isEnabled = host.isEnabled
                 info.stateDescription = if (checked) "已选中" else "未选中"
             }
         }
-        // Collapse children into this row's single spoken node.
         if (row is android.view.ViewGroup) {
             hideChildrenFromA11y(row)
         }
@@ -109,12 +121,15 @@ object A11yUtils {
     /** Fire a window-state event (menu opened) for TalkBack focus movement. */
     @JvmStatic
     fun announceWindowOpened(view: View?, title: CharSequence?) {
-        if (view == null) {
+        if (view == null || !a11yEnabled(view)) {
             return
         }
-        setPaneTitle(view, title)
-        announce(view, title)
-        view.sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+        try {
+            setPaneTitle(view, title)
+            announce(view, title)
+            view.sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+        } catch (ignored: Throwable) {
+        }
     }
 
     /** Keep check ImageViews decorative when the parent row carries state. */

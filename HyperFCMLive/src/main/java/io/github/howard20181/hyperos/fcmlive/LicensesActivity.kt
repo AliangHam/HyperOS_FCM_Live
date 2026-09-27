@@ -46,12 +46,6 @@ class LicensesActivity : AppCompatActivity() {
         list.clipToPadding = false
         val inflater = LayoutInflater.from(this)
 
-        addSectionHeader(list, inflater, getString(R.string.licenses_section_this_app))
-        val appRow = inflater.inflate(R.layout.item_license_ref, list, false)
-        bindRow(appRow, getString(R.string.app_name), "GPL-3.0")
-        appRow.setOnClickListener { openUrl(REPO_URL) }
-        addRow(list, appRow, first = true, last = true)
-
         addSectionHeader(list, inflater, getString(R.string.licenses_section_licenses))
         val licenseHint = getString(R.string.license_view_full_text)
         val licenseNames = arrayOf(
