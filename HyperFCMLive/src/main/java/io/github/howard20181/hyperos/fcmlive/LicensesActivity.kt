@@ -107,7 +107,8 @@ class LicensesActivity : AppCompatActivity() {
     private fun addSectionHeader(list: LinearLayout, inflater: LayoutInflater, title: String) {
         val header = TextView(this)
         header.text = title
-        header.setTextColor(ThemeEngine.palette(this).primary)
+        // Same colour role as About's section titles (@color/md_primary).
+        header.setTextColor(getColor(R.color.md_primary))
         header.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         header.typeface = Typeface.create("sans-medium", Typeface.NORMAL)
         header.setPadding(dp(8), dp(28), dp(8), dp(12))

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher glyph: a wake/push bell with a keep-alive pulse line. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.58"
+        android:scaleY="0.58"
+        android:pivotX="54"
+        android:pivotY="52">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,30c-11,0 -20,9 -20,20v12l-5,9h50l-5,-9v-12c0,-11 -9,-20 -20,-20z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M47,76a7,7 0,0 0,14 0z" />
+    </group>
+    <path
+        android:pathData="M30,90l8,0 5,-10 7,20 7,-16 5,6 10,0"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>

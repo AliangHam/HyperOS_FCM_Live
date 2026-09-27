@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand rose, matches FALLBACK_SEED / md_primary brand. -->
+    <color name="ic_launcher_background">#8B4A5A</color>
+</resources>
