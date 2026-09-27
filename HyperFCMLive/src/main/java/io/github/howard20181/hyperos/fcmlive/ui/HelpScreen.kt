@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,44 +32,55 @@ import io.github.howard20181.hyperos.fcmlive.theme.HyperFCMLiveTheme
 
 @Composable
 fun HelpScreen() {
+    // Edge-to-edge: the scroll viewport fills the window (content passes under
+    // the gesture indicator). Only the scrolled body carries padding — a
+    // fixed inset band on the host view reads as a floating grey strip.
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
     ) {
-        SectionTitle(R.string.help_section_how)
-        HelpCard {
-            BodyText(R.string.help_how_body)
-        }
+        Column(
+            modifier = Modifier.padding(
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 16.dp + navBottom
+            )
+        ) {
+            SectionTitle(R.string.help_section_how)
+            HelpCard {
+                BodyText(R.string.help_how_body)
+            }
 
-        SectionTitle(R.string.help_section_allowlist)
-        HelpCard {
-            TitleText(R.string.help_allowlist_empty_title)
-            BodyText(R.string.help_allowlist_empty_body, topPadding = 4.dp)
-            TitleText(R.string.help_allowlist_checked_title, topPadding = 16.dp)
-            BodyText(R.string.help_allowlist_checked_body, topPadding = 4.dp)
-        }
+            SectionTitle(R.string.help_section_allowlist)
+            HelpCard {
+                TitleText(R.string.help_allowlist_empty_title)
+                BodyText(R.string.help_allowlist_empty_body, topPadding = 4.dp)
+                TitleText(R.string.help_allowlist_checked_title, topPadding = 16.dp)
+                BodyText(R.string.help_allowlist_checked_body, topPadding = 4.dp)
+            }
 
-        SectionTitle(R.string.help_section_strict)
-        HelpCard {
-            TitleText(R.string.help_strict_on_title)
-            HtmlBodyText(R.string.help_strict_on_body, topPadding = 4.dp)
-            TitleText(R.string.help_strict_unchanged_title, topPadding = 16.dp)
-            BodyText(R.string.help_strict_unchanged_body, topPadding = 4.dp)
-        }
+            SectionTitle(R.string.help_section_strict)
+            HelpCard {
+                TitleText(R.string.help_strict_on_title)
+                HtmlBodyText(R.string.help_strict_on_body, topPadding = 4.dp)
+                TitleText(R.string.help_strict_unchanged_title, topPadding = 16.dp)
+                BodyText(R.string.help_strict_unchanged_body, topPadding = 4.dp)
+            }
 
-        SectionTitle(R.string.help_section_faq)
-        HelpCard {
-            TitleText(R.string.help_faq_q1)
-            BodyText(R.string.help_faq_a1, topPadding = 4.dp)
-            TitleText(R.string.help_faq_q2, topPadding = 16.dp)
-            BodyText(R.string.help_faq_a2, topPadding = 4.dp)
-            TitleText(R.string.help_faq_q3, topPadding = 16.dp)
-            BodyText(R.string.help_faq_a3, topPadding = 4.dp)
-            TitleText(R.string.help_faq_q4, topPadding = 16.dp)
-            BodyText(R.string.help_faq_a4, topPadding = 4.dp)
+            SectionTitle(R.string.help_section_faq)
+            HelpCard {
+                TitleText(R.string.help_faq_q1)
+                BodyText(R.string.help_faq_a1, topPadding = 4.dp)
+                TitleText(R.string.help_faq_q2, topPadding = 16.dp)
+                BodyText(R.string.help_faq_a2, topPadding = 4.dp)
+                TitleText(R.string.help_faq_q3, topPadding = 16.dp)
+                BodyText(R.string.help_faq_a3, topPadding = 4.dp)
+                TitleText(R.string.help_faq_q4, topPadding = 16.dp)
+                BodyText(R.string.help_faq_a4, topPadding = 4.dp)
+            }
         }
     }
 }

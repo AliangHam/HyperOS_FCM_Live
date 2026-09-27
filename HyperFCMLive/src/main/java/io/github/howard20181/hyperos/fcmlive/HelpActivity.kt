@@ -52,9 +52,14 @@ class HelpActivity : AppCompatActivity() {
      * bottom edge of the screen.
      */
     private fun applySystemBarInsets() {
+        // Content is fully immersive: no bottom inset padding on the Compose
+        // host (that band looks like a floating strip while scrolling). Only
+        // the top bar is pushed below the status bar; HelpScreen adds
+        // navigation-bar padding as scroll content so the last card can clear
+        // the gesture line after the user reaches the end.
         UiUtils.applyBarInsets(
             this, findViewById(R.id.top_bar),
-            findViewById(R.id.help_content), 16
+            null, 0
         )
     }
 }
