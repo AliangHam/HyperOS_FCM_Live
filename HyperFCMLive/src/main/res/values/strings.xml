@@ -164,7 +164,7 @@
     <string name="status_hooks_missing">%1$d missing · %2$d of %3$d present</string>
     <string name="status_hooks_unreachable">None of these could be read from here — confirm with the log command below</string>
     <string name="status_state_present">Present</string>
-    <string name="status_state_absent_expected">Not on this ROM</string>
+    <string name="status_state_absent_expected">N/A</string>
     <string name="status_state_absent_unexpected">Missing</string>
     <string name="status_state_unknown">Not checkable</string>
     <string name="status_note_hyperos3">HyperOS 3</string>

@@ -157,7 +157,7 @@
     <string name="status_hooks_missing">%1$d 个缺失 · %2$d/%3$d 可用</string>
     <string name="status_hooks_unreachable">这些目标都无法在此处读取，请用下面的日志命令确认</string>
     <string name="status_state_present">可用</string>
-    <string name="status_state_absent_expected">本 ROM 不适用</string>
+    <string name="status_state_absent_expected">不适用</string>
     <string name="status_state_absent_unexpected">缺失</string>
     <string name="status_state_unknown">无法检测</string>
     <string name="status_note_hyperos3">HyperOS 3</string>

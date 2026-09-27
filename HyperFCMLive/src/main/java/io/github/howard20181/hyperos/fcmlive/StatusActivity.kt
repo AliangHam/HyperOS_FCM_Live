@@ -196,16 +196,19 @@ class StatusActivity : AppCompatActivity() {
     }
 
     private fun stateColor(item: HookStatus.Item): Color {
-        val primary = Color(ThemeEngine.palette(this).primary)
+        val palette = ThemeEngine.palette(this)
+        val primary = Color(palette.primary)
         if (item.state == HookStatus.State.PRESENT) return primary
         if (item.state == HookStatus.State.ABSENT) {
+            // Expected absence ("不适用") is a ROM difference, not a fault:
+            // same quiet tone as "无法检测", never the accent.
             return if (item.isUnexpectedAbsence()) {
                 primary
             } else {
-                Color(ThemeEngine.palette(this).onSurfaceVariant)
+                Color(palette.hint)
             }
         }
-        return Color(ThemeEngine.palette(this).hint)
+        return Color(palette.hint)
     }
 
     private fun noteFor(item: HookStatus.Item): String? {

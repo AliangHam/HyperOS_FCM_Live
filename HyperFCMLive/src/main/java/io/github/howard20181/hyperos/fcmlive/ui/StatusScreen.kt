@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -207,20 +208,22 @@ private fun HookRow(row: StatusHookRow) {
             .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Name gets most of the row so long method identifiers stay readable;
-        // state is capped narrower than before (was 160.dp) and wraps inside
-        // its own column so it never steals or covers the name.
+        // Name column width must not depend on how long the state word is:
+        // "可用" must not reveal more of the target than "不适用" does.
+        // State is a fixed slot; name ellipsizes at the same place every row.
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 10.dp)
+                .padding(end = 8.dp)
         ) {
             Text(
                 text = row.name,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 13.sp,
                 fontFamily = FontFamily.Monospace,
-                lineHeight = 18.sp
+                lineHeight = 18.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             if (row.note != null) {
                 Text(
@@ -237,9 +240,9 @@ private fun HookRow(row: StatusHookRow) {
             fontSize = 12.sp,
             fontFamily = FontFamily.SansSerif,
             lineHeight = 16.sp,
-            maxLines = 3,
+            maxLines = 2,
             textAlign = TextAlign.End,
-            modifier = Modifier.widthIn(max = 112.dp)
+            modifier = Modifier.width(72.dp)
         )
     }
 }
