@@ -32,9 +32,17 @@ import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import io.github.howard20181.hyperos.fcmlive.theme.AppPalette
+import io.github.howard20181.hyperos.fcmlive.theme.HyperFCMLiveTheme
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
+import io.github.howard20181.hyperos.fcmlive.ui.MainChrome
+import io.github.howard20181.hyperos.fcmlive.ui.MainListHost
+import io.github.howard20181.hyperos.fcmlive.ui.MainScreen
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 import java.util.Locale
@@ -53,16 +61,13 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     private var adapter: AppListAdapter? = null
     private var titleView: TextView? = null
     private var searchView: SearchView? = null
-    private var btnSearch: ImageButton? = null
-    private var btnBack: ImageButton? = null
-    private var btnMore: ImageButton? = null
-    private var btnBatchAdd: ImageButton? = null
-    private var btnBatchRemove: ImageButton? = null
-    private var btnSelectAll: ImageButton? = null
     private var swipeRefresh: SwipeRefreshLayout? = null
     private var backInvokedCallback: OnBackInvokedCallback? = null
     private var searching = false
     private var multiSelectMode = false
+    private var mainChrome by mutableStateOf(
+        MainChrome(title = "FCM", searching = false, multiSelect = false)
+    )
 
     /**
      * Set once the multi-select gesture is known — either because the tip below
@@ -138,10 +143,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
 
         applySystemBarInsets()
-
-        titleView = findViewById<TextView?>(R.id.toolbar_title)?.also {
-            it.setText(R.string.settings_title)
-        }
+        titleView = null
 
         // Seed UI order from the local cache so allowlisted apps sit on top
         // immediately, before libxposed remote prefs bind.
@@ -192,42 +194,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             }
         })
 
-        searchView = findViewById<SearchView?>(R.id.search_view)?.also {
-            it.setOnQueryTextListener(this)
-            styleSearchView(it)
-        }
-        btnBack = findViewById(R.id.btn_back)
-        btnSearch = findViewById(R.id.btn_search)
-        btnMore = findViewById(R.id.btn_more)
-        btnBatchAdd = findViewById(R.id.btn_batch_add)
-        btnBatchRemove = findViewById(R.id.btn_batch_remove)
-        btnSelectAll = findViewById(R.id.btn_select_all)
-        btnSearch?.let {
-            it.setOnClickListener { enterSearch() }
-            attachTip(it, R.string.tooltip_search)
-        }
-        btnBack?.let {
-            it.setOnClickListener {
-                if (multiSelectMode) exitMultiSelect() else exitSearch()
-            }
-            attachTip(it, R.string.exit_search)
-        }
-        btnMore?.let {
-            it.setOnClickListener(this::showOverflowMenu)
-            attachTip(it, R.string.more_menu)
-        }
-        btnBatchAdd?.let {
-            it.setOnClickListener { applyBatchAllowlist(true) }
-            attachTip(it, R.string.batch_add_allowlist)
-        }
-        btnBatchRemove?.let {
-            it.setOnClickListener { applyBatchAllowlist(false) }
-            attachTip(it, R.string.batch_remove_allowlist)
-        }
-        btnSelectAll?.let {
-            it.setOnClickListener { toggleSelectAllVisible() }
-            attachTip(it, R.string.select_all)
-        }
+        bindComposeChrome()
 
         // Material / Android standard pull-to-refresh (SwipeRefreshLayout).
         swipeRefresh = findViewById<SwipeRefreshLayout?>(R.id.refresh_layout)?.also {
@@ -238,11 +205,6 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             it.setOnRefreshListener { loadApps() }
             // Only at the top of the list; default Material trigger distance.
             it.isEnabled = true
-        }
-
-        findViewById<View>(R.id.fab_fcm_diagnostics)?.let {
-            it.setOnClickListener { openFcmDiagnostics() }
-            attachTip(it, R.string.fcm_diagnostics)
         }
 
         val list = findViewById<View>(R.id.app_list)
@@ -655,13 +617,75 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
      * bar (no fitsSystemWindows — that stacked with dimen padding and pushed
      * the title too far down).
      */
-    private fun applySystemBarInsets() {
-        val topBar = findViewById<View>(R.id.top_bar) ?: return
-        val fab = findViewById<View>(R.id.fab_fcm_diagnostics)
-        UiUtils.applyBarInsets(this, topBar, findViewById(R.id.app_list), 88) { _, bottom ->
-            applyFabBottomMargin(fab, bottom)
+    private fun bindComposeChrome() {
+        val host = findViewById<ComposeView>(R.id.main_compose) ?: return
+        host.setBackgroundColor(ThemeEngine.palette(this).pageBg)
+        host.setContent {
+            HyperFCMLiveTheme {
+                MainScreen(
+                    chrome = mainChrome,
+                    onBack = {
+                        if (multiSelectMode) exitMultiSelect() else exitSearch()
+                    },
+                    onSearch = { enterSearch() },
+                    onMore = { showOverflowMenu(findViewById(R.id.main_compose)) },
+                    onBatchAdd = { applyBatchAllowlist(true) },
+                    onBatchRemove = { applyBatchAllowlist(false) },
+                    onSelectAll = { toggleSelectAllVisible() },
+                    onFab = { openFcmDiagnostics() },
+                    listContent = {
+                        MainListHost { ctx ->
+                            android.view.LayoutInflater.from(ctx)
+                                .inflate(R.layout.view_main_list, null).also {
+                                    searchView = it.findViewById(R.id.search_view)
+                                    searchView?.setOnQueryTextListener(this@MainActivity)
+                                    searchView?.let { sv -> styleSearchView(sv) }
+                                    swipeRefresh = it.findViewById(R.id.refresh_layout)
+                                    swipeRefresh?.setColorSchemeColors(
+                                        ThemeEngine.palette(this@MainActivity).primary
+                                    )
+                                    swipeRefresh?.setOnRefreshListener { loadApps() }
+                                    swipeRefresh?.isEnabled = true
+                                    val list = it.findViewById<ListView>(R.id.app_list)
+                                    list?.adapter = adapter
+                                }
+                        }
+                    },
+                )
+            }
         }
-        applyFabBottomMargin(fab, 0)
+        syncChrome()
+    }
+
+    private fun syncChrome() {
+        val count = adapter?.getSelectedPackages()?.size ?: 0
+        mainChrome = MainChrome(
+            title = if (multiSelectMode) {
+                getString(R.string.selected_count, count)
+            } else {
+                getString(R.string.settings_title)
+            },
+            searching = searching,
+            multiSelect = multiSelectMode,
+            showBack = searching || multiSelectMode,
+            showSearch = !searching && !multiSelectMode,
+            showMore = !multiSelectMode,
+            showBatch = multiSelectMode,
+            showSelectAll = multiSelectMode,
+            selectAllIcon = if (isAllVisibleSelected()) {
+                R.drawable.ic_deselect_all
+            } else {
+                R.drawable.ic_select_all
+            },
+        )
+    }
+
+    private fun applySystemBarInsets() {
+        val topBar = findViewById<View>(R.id.main_compose) ?: return
+        val fab: View? = null
+        UiUtils.applyBarInsets(this, topBar, findViewById(R.id.app_list), 88) { _, bottom ->
+            // FAB is Compose-drawn; list still gets bottom pad.
+        }
     }
 
     /**
@@ -746,15 +770,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             it.isIconified = false
             it.requestFocus()
         }
-        btnSearch?.visibility = View.GONE
-        btnBack?.let {
-            it.visibility = View.VISIBLE
-            attachTip(it, R.string.exit_search)
-        }
-        btnMore?.visibility = View.VISIBLE
-        btnBatchAdd?.visibility = View.GONE
-        btnBatchRemove?.visibility = View.GONE
-        btnSelectAll?.visibility = View.GONE
+        syncChrome()
     }
 
     private fun exitSearch() {
@@ -772,13 +788,9 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                 it.setText(R.string.settings_title)
             }
         }
-        btnSearch?.visibility = View.VISIBLE
-        btnBack?.visibility = View.GONE
-        btnBatchAdd?.visibility = View.GONE
-        btnBatchRemove?.visibility = View.GONE
-        btnSelectAll?.visibility = View.GONE
         currentQuery = ""
         filterApps("")
+        syncChrome()
     }
 
     /**
@@ -840,12 +852,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             it.setText(R.string.settings_title)
         }
         searchView?.visibility = View.GONE
-        btnSearch?.visibility = View.VISIBLE
-        btnBack?.visibility = View.GONE
-        btnMore?.visibility = View.VISIBLE
-        btnBatchAdd?.visibility = View.GONE
-        btnBatchRemove?.visibility = View.GONE
-        btnSelectAll?.visibility = View.GONE
+        syncChrome()
     }
 
     private fun applyMultiSelectBar() {
@@ -854,23 +861,15 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
         titleView?.visibility = View.VISIBLE
         searchView?.visibility = View.GONE
-        btnBack?.let {
-            it.visibility = View.VISIBLE
-            attachTip(it, R.string.exit_multi_select)
-        }
-        btnSearch?.visibility = View.GONE
-        btnMore?.visibility = View.GONE
-        btnBatchAdd?.visibility = View.VISIBLE
-        btnBatchRemove?.visibility = View.VISIBLE
-        btnSelectAll?.visibility = View.VISIBLE
         val count = adapter?.getSelectedPackages()?.size ?: 0
         updateSelectionTitle(count)
         updateSelectAllIcon()
+        syncChrome()
     }
 
     private fun updateSelectionTitle(count: Int) {
-        if (titleView != null && multiSelectMode) {
-            titleView!!.text = getString(R.string.selected_count, count)
+        if (multiSelectMode) {
+            syncChrome()
         }
     }
 
@@ -894,12 +893,10 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
      * when all are selected the icon flips to deselect-all.
      */
     private fun updateSelectAllIcon() {
-        if (btnSelectAll == null || !multiSelectMode) {
+        if (!multiSelectMode) {
             return
         }
-        val all = isAllVisibleSelected()
-        btnSelectAll!!.setImageResource(if (all) R.drawable.ic_deselect_all else R.drawable.ic_select_all)
-        attachTip(btnSelectAll, if (all) R.string.deselect_all else R.string.select_all)
+        syncChrome()
     }
 
     private fun toggleSelectAllVisible() {
