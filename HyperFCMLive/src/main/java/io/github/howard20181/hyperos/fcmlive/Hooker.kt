@@ -347,12 +347,15 @@ class Hooker : XposedModule() {
             "deferBroadcast", String::class.java
         )
         hookE(deferBroadcastMethod).intercept { chain: XposedInterface.Chain ->
-            // Only bypass deferral for GMS/FCM-related actions (same set as
-            // deferBroadcastForMiui). Lets every other broadcast follow the
-            // normal deferral policy — aligned with strict-mode's minimal
-            // intervention philosophy.
+            // Bypass deferral for the complete FCM chain:
+            //  - CN_DEFER_BROADCAST: GMS-internal reconnect/heartbeat actions
+            //  - ACTION_REMOTE_INTENT: GMS → target-app c2dm delivery
+            // Everything else follows the normal deferral policy (aligned with
+            // strict mode's minimal-intervention philosophy).
             val action = chain.getArg(0) as? String
-            if (action != null && CN_DEFER_BROADCAST.contains(action)) {
+            if (action != null &&
+                (CN_DEFER_BROADCAST.contains(action) || ACTION_REMOTE_INTENT == action)
+            ) {
                 return@intercept false
             }
             chain.proceed()
