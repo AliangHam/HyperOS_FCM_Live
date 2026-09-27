@@ -11,7 +11,6 @@ import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -166,46 +165,14 @@ class LicensesActivity : AppCompatActivity() {
     private fun showLicenseDialog(title: String, rawRes: Int) {
         val text = readRawText(rawRes)
         try {
-            val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
+            MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
                 .setTitle(title)
                 .setMessage(text)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
-            hideDialogScrollIndicators(dialog)
         } catch (t: Throwable) {
             // Never let a license viewer take the screen down.
             Toast.makeText(this, t.message ?: "dialog failed", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    /**
-     * MaterialAlertDialog paints 1dp `scrollIndicatorUp` / `scrollIndicatorDown`
-     * under the title and above the button bar while the message scrolls.
-     * AlertController keeps those views in fields and re-toggles visibility on
-     * every scroll, so detaching them is the only way to keep them gone.
-     */
-    private fun hideDialogScrollIndicators(dialog: android.app.Dialog) {
-        val res = dialog.context.resources
-        val pkgs = arrayOf(
-            "com.google.android.material",
-            "androidx.appcompat",
-            packageName,
-        )
-        for (name in INDICATOR_IDS) {
-            var view: View? = null
-            for (pkg in pkgs) {
-                val id = res.getIdentifier(name, "id", pkg)
-                if (id != 0) {
-                    view = dialog.findViewById(id)
-                    if (view != null) {
-                        break
-                    }
-                }
-            }
-            val indicator = view ?: continue
-            indicator.visibility = View.GONE
-            indicator.alpha = 0f
-            (indicator.parent as? ViewGroup)?.removeView(indicator)
         }
     }
 
@@ -230,9 +197,6 @@ class LicensesActivity : AppCompatActivity() {
     private fun dp(value: Int): Int = UiUtils.dp(this, value)
 
     companion object {
-        /** Material/AppCompat AlertDialog scroll-fade ImageViews. */
-        private val INDICATOR_IDS = arrayOf("scrollIndicatorUp", "scrollIndicatorDown")
-
         private const val REPO_URL = "https://github.com/iamqwert/HyperOS_FCM_Live"
         private const val ANDROIDX_URL = "https://github.com/androidx/androidx"
         private const val AOSP_URL = "https://android.googlesource.com/platform/frameworks/base"

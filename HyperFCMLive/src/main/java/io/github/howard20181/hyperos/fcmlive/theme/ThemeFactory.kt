@@ -9,6 +9,7 @@ import android.graphics.drawable.LayerDrawable
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import com.google.android.material.card.MaterialCardView
@@ -92,13 +93,45 @@ internal class ThemeFactory(
         } catch (ignored: Throwable) {
             null
         }
-        val view = delegated ?: createView(name, context, attrs) ?: return null
+        if (delegated != null) {
+            try {
+                bind(delegated, attrs)
+            } catch (ignored: Throwable) {
+                // Theming is best effort; a broken binding must never break inflation.
+            }
+            return delegated
+        }
+        // No delegate (or it declined the tag).
+        // - Short names (FrameLayout, TextView, ImageButton, …) are the
+        //   hand-tuned screens and must be created + painted, otherwise
+        //   @color/md_* falls through to system_accent* and looks monochrome.
+        // - Fully-qualified androidx.* is dialog/AppCompat chrome: never invent
+        //   a stand-in, let the platform inflate it (the license-dialog crash).
+        // - Fully-qualified Material (card / FAB) can be built and painted.
+        val view = when {
+            name.startsWith("androidx.") -> return null
+            name.contains('.') && !name.startsWith(MATERIAL_PREFIX) -> return null
+            name.startsWith(MATERIAL_PREFIX) -> createFullClassView(name, context, attrs)
+            name == "Button" -> return null // dialog action: AppCompat/Material only
+            else -> createView(name, context, attrs)
+        } ?: return null
         try {
             bind(view, attrs)
         } catch (ignored: Throwable) {
             // Theming is best effort; a broken binding must never break inflation.
         }
         return view
+    }
+
+    private fun createFullClassView(name: String, context: Context, attrs: AttributeSet): View? {
+        return try {
+            val clazz = Class.forName(name, false, context.classLoader)
+                .asSubclass(View::class.java)
+            val ctor = clazz.getConstructor(Context::class.java, AttributeSet::class.java)
+            ctor.newInstance(context, attrs)
+        } catch (ignored: Throwable) {
+            null
+        }
     }
 
     private fun createView(name: String, context: Context, attrs: AttributeSet): View? {
@@ -197,6 +230,7 @@ internal class ThemeFactory(
     companion object {
         private const val NS = "http://schemas.android.com/apk/res/android"
         private const val NS_APP = "http://schemas.android.com/apk/res-auto"
+        private const val MATERIAL_PREFIX = "com.google.android.material."
         private val PREFIXES = arrayOf(
             "android.widget.", "android.view.", "android.webkit.", "android.app.",
         )
@@ -208,6 +242,30 @@ internal class ThemeFactory(
             shape.setColor(color)
             shape.cornerRadius = radiusDp * context.resources.displayMetrics.density
             return shape
+        }
+
+        /**
+         * Paint any [MaterialCardView] under [root] that the inflater already
+         * built (AppCompat path). Covers list rows even when we did not create
+         * the card ourselves.
+         */
+        @JvmStatic
+        fun paintCards(root: View?, palette: AppPalette) {
+            if (root == null) {
+                return
+            }
+            if (root is MaterialCardView) {
+                try {
+                    root.setCardBackgroundColor(palette.card)
+                } catch (ignored: Throwable) {
+                    // Best effort.
+                }
+            }
+            if (root is ViewGroup) {
+                for (i in 0 until root.childCount) {
+                    paintCards(root.getChildAt(i), palette)
+                }
+            }
         }
     }
 }

@@ -9,14 +9,6 @@
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.HyperFCMLive.Dialog</item>
         <!-- Kill the title/message/button separator line. -->
         <item name="android:listDivider">@null</item>
-        <!--
-          MaterialAlertDialog draws 1dp scrollIndicatorUp/Down ImageViews with
-          colorForeground tint — the lines under the title and above the button
-          while the license text scrolls. Transparent foreground makes them
-          invisible; showLicenseDialog also detaches the views after show().
-        -->
-        <item name="android:colorForeground">@android:color/transparent</item>
-        <item name="android:colorForegroundInverse">@android:color/transparent</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.HyperFCMLive.DialogButton</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.HyperFCMLive.DialogButton</item>
         <item name="buttonBarNeutralButtonStyle">@style/Widget.HyperFCMLive.DialogButton</item>

@@ -56,7 +56,21 @@ object ThemeSupport {
     private fun applyDynamicColors(activity: Activity) {
         try {
             if (ThemePrefs.dynamicColor(activity)) {
-                DynamicColors.applyToActivityIfAvailable(activity)
+                val systemSeed = systemAccentSeed(activity)
+                if (systemSeed != 0 && !isNearGrey(systemSeed)) {
+                    DynamicColors.applyToActivityIfAvailable(activity)
+                } else {
+                    // HyperOS can expose a near-grey accent after overnight
+                    // palette refresh. Values-v31 md_* roles alias system_accent*,
+                    // so the main / licenses screens collapse to monochrome.
+                    // Re-seed from ThemeEngine (Tonal spot etc. still apply
+                    // chroma) so those roles stay visibly colored.
+                    val seed = colorfulSeed(activity, systemSeed)
+                    val options = DynamicColorsOptions.Builder()
+                        .setContentBasedSource(seed)
+                        .build()
+                    DynamicColors.applyToActivityIfAvailable(activity, options)
+                }
             } else {
                 val seed = ThemePrefs.seedColor(activity)
                 if (seed != 0) {
@@ -71,6 +85,40 @@ object ThemeSupport {
         }
     }
 
+    /** Prefer the in-app seed; fall back to the brand rose when the system hue is empty. */
+    private fun colorfulSeed(activity: Activity, systemSeed: Int): Int {
+        val themed = ThemeEngine.palette(activity).primary
+        if (!isNearGrey(themed)) {
+            return themed
+        }
+        if (systemSeed != 0 && !isNearGrey(systemSeed)) {
+            return systemSeed
+        }
+        return 0xFF8B4A5A.toInt()
+    }
+
+    private fun systemAccentSeed(context: Context): Int {
+        return try {
+            @Suppress("DEPRECATION")
+            context.resources.getColor(android.R.color.system_accent1_500)
+        } catch (ignored: Throwable) {
+            0
+        }
+    }
+
+    /** True when the color's chroma is too low to carry a Material accent hue. */
+    private fun isNearGrey(color: Int): Boolean {
+        if (color == 0) {
+            return true
+        }
+        val r = ((color shr 16) and 0xFF) / 255f
+        val g = ((color shr 8) and 0xFF) / 255f
+        val b = (color and 0xFF) / 255f
+        val max = maxOf(r, g, b)
+        val min = minOf(r, g, b)
+        return (max - min) < 0.04f
+    }
+
     /** Call before `setContentView`. */
     @JvmStatic
     fun onCreate(activity: Activity) {
@@ -78,6 +126,33 @@ object ThemeSupport {
         val palette = ThemeEngine.palette(activity)
         installFactory(activity, palette)
         applyWindow(activity, palette)
+        installCardPainter(activity, palette)
+    }
+
+    /**
+     * setContentView runs after this method, so card painting is deferred to
+     * the first layout pass. Covers MaterialCardViews the inflater built
+     * without going through [ThemeFactory].
+     */
+    private fun installCardPainter(activity: Activity, palette: AppPalette) {
+        try {
+            val decor = activity.window?.decorView ?: return
+            decor.viewTreeObserver.addOnPreDrawListener(
+                object : android.view.ViewTreeObserver.OnPreDrawListener {
+                    private var done = false
+                    override fun onPreDraw(): Boolean {
+                        if (!done) {
+                            done = true
+                            decor.viewTreeObserver.removeOnPreDrawListener(this)
+                            ThemeFactory.paintCards(decor, palette)
+                        }
+                        return true
+                    }
+                }
+            )
+        } catch (ignored: Throwable) {
+            // Theming is best effort.
+        }
     }
 
     /**
