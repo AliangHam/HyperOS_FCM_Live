@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -205,17 +207,20 @@ private fun HookRow(row: StatusHookRow) {
             .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Name gets most of the row so long method identifiers stay readable;
+        // state is capped narrower than before (was 160.dp) and wraps inside
+        // its own column so it never steals or covers the name.
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 12.dp)
+                .padding(end = 10.dp)
         ) {
             Text(
                 text = row.name,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontFamily = FontFamily.Monospace,
-                lineHeight = 20.sp
+                lineHeight = 18.sp
             )
             if (row.note != null) {
                 Text(
@@ -231,8 +236,10 @@ private fun HookRow(row: StatusHookRow) {
             color = row.stateColor,
             fontSize = 12.sp,
             fontFamily = FontFamily.SansSerif,
-            textAlign = androidx.compose.ui.text.style.TextAlign.End,
-            modifier = Modifier.width(160.dp)
+            lineHeight = 16.sp,
+            maxLines = 3,
+            textAlign = TextAlign.End,
+            modifier = Modifier.widthIn(max = 112.dp)
         )
     }
 }
