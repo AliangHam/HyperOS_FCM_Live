@@ -1,6 +1,7 @@
 package io.github.howard20181.hyperos.fcmlive
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -120,6 +121,21 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
      * dropped unless it is still the latest.
      */
     private val appScanGeneration = AtomicInteger()
+
+    /**
+     * GET_INSTALLED_APPS (MIUI/HyperOS). Result is handled inline — the scan
+     * always restarts after the dialog, granted or not, so a partial list is
+     * still usable and the screen never blocks on the answer.
+     */
+    private val requestInstalledAppsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (!granted) {
+                Toast.makeText(
+                    this, R.string.installed_apps_permission_denied, Toast.LENGTH_LONG
+                ).show()
+            }
+            loadApps()
+        }
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))
@@ -300,7 +316,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         if (checkSelfPermission(GET_INSTALLED_APPS_PERMISSION) == PackageManager.PERMISSION_GRANTED) {
             return false
         }
-        requestPermissions(arrayOf(GET_INSTALLED_APPS_PERMISSION), REQUEST_GET_INSTALLED_APPS)
+        requestInstalledAppsLauncher.launch(GET_INSTALLED_APPS_PERMISSION)
         return true
     }
 
@@ -324,31 +340,13 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
      * empty, which is indistinguishable from a device that genuinely has no FCM
      * app — so anything that reacts to an empty scan has to ask this first.
      *
-     * This is deliberately a live check rather than a flag set from
-     * `onRequestPermissionsResult`: the Xposed service can bind and kick
+     * This is deliberately a live check rather than a flag set from the
+     * permission callback: the Xposed service can bind and kick
      * off a scan before the user has even answered the dialog.
      */
     private fun isAppListReadable(): Boolean {
         return !hasAppListGate() ||
             checkSelfPermission(GET_INSTALLED_APPS_PERMISSION) == PackageManager.PERMISSION_GRANTED
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != REQUEST_GET_INSTALLED_APPS) {
-            return
-        }
-        val granted = grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
-        if (!granted) {
-            // Partial package list is still usable — do not block the screen.
-            Toast.makeText(this, R.string.installed_apps_permission_denied, Toast.LENGTH_LONG).show()
-        }
-        loadApps()
     }
 
     /**
@@ -435,55 +433,45 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
 
         val loc = IntArray(2)
-        anchor.getLocationOnScreen(loc)
+        anchor.getLocationInWindow(loc)
         val gap = dp(8)
         val edge = dp(8)
+        // Freeform / split-screen: clamp against the window, not the display.
+        val windowW = window.decorView.width
+        val windowH = window.decorView.height
 
-        // Horizontal: center on the anchor, then clamp into the screen.
+        // Horizontal: center on the anchor, then clamp into the window.
         var screenX = loc[0] + (anchor.width - tipW) / 2
         if (screenX < edge) {
             screenX = edge
         }
-        if (screenX + tipW > screenW - edge) {
-            screenX = Math.max(edge, screenW - edge - tipW)
+        if (windowW > 0 && screenX + tipW > windowW - edge) {
+            screenX = Math.max(edge, windowW - edge - tipW)
         }
 
         // Vertical: prefer a clear gap under the icon; flip above when tight
         // (toolbar icons near the status bar, FAB near the nav bar).
         val yBelow = loc[1] + anchor.height + gap
         val yAbove = loc[1] - gap - tipH
-        val roomBelow = screenH - edge - (loc[1] + anchor.height)
+        val roomBelow = (if (windowH > 0) windowH else screenH) - edge - (loc[1] + anchor.height)
         val roomAbove = loc[1] - edge
         val fitsBelow = roomBelow >= tipH + gap
         val fitsAbove = roomAbove >= tipH + gap
         var screenY = when {
             fitsBelow -> yBelow
             fitsAbove -> yAbove
-            roomBelow >= roomAbove -> Math.min(yBelow, screenH - edge - tipH)
+            roomBelow >= roomAbove -> Math.min(yBelow, (if (windowH > 0) windowH else screenH) - edge - tipH)
             else -> Math.max(yAbove, edge)
         }
         if (screenY < edge) {
             screenY = edge
         }
-        if (screenY + tipH > screenH - edge) {
-            screenY = Math.max(edge, screenH - edge - tipH)
+        if (windowH > 0 && screenY + tipH > windowH - edge) {
+            screenY = Math.max(edge, windowH - edge - tipH)
         }
-
-        // PopupWindow coordinates are window-relative.
-        val decor = window?.decorView
-        var decorX = 0
-        var decorY = 0
-        if (decor != null) {
-            val decorLoc = IntArray(2)
-            decor.getLocationOnScreen(decorLoc)
-            decorX = decorLoc[0]
-            decorY = decorLoc[1]
-        }
-        val winX = screenX - decorX
-        val winY = screenY - decorY
 
         try {
-            popup.showAtLocation(anchor, Gravity.NO_GRAVITY, winX, winY)
+            popup.showAtLocation(anchor, Gravity.NO_GRAVITY, screenX, screenY)
             activeTooltip = popup
             tipView.postDelayed(dismissTooltipRunnable, 2200)
         } catch (ignored: Throwable) {
@@ -1165,17 +1153,20 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             }
         }
 
-        // Keep the popup fully on-screen; width already equals content.
+        // Keep the popup fully inside the window. Freeform / split-screen
+        // windows are narrower than the display: screen coordinates and
+        // displayMetrics.widthPixels would slide the menu toward the middle.
         val loc = IntArray(2)
-        anchor.getLocationOnScreen(loc)
-        val screenW = resources.displayMetrics.widthPixels
+        anchor.getLocationInWindow(loc)
+        val windowW = window.decorView.width
         val margin = dp(8)
         var xOff = anchor.width - popupW
-        if (loc[0] + xOff < margin) {
-            xOff = margin - loc[0]
-        }
-        if (loc[0] + xOff + popupW > screenW - margin) {
-            xOff = screenW - margin - loc[0] - popupW
+        if (windowW > 0) {
+            val minOff = margin - loc[0]
+            val maxOff = windowW - margin - popupW - loc[0]
+            if (minOff <= maxOff) {
+                xOff = xOff.coerceIn(minOff, maxOff)
+            }
         }
         popup.showAsDropDown(anchor, xOff, dp(4))
     }
@@ -1516,7 +1507,6 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         private const val GET_INSTALLED_APPS_PERMISSION =
             "com.android.permission.GET_INSTALLED_APPS"
         private const val MIUI_SECURITY_PACKAGE = "com.lbe.security.miui"
-        private const val REQUEST_GET_INSTALLED_APPS = 1001
 
         /**
          * Tapping apps one by one into the allowlist looks like this: fill the

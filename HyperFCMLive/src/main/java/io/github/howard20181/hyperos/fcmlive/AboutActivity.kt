@@ -1,6 +1,7 @@
 package io.github.howard20181.hyperos.fcmlive
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
 import android.content.Intent
@@ -80,11 +81,25 @@ class AboutActivity : AppCompatActivity() {
 
     /**
      * The window's safe area, kept up to date by [applySystemBarInsets].
-     * The menu overlay is positioned by hand in screen coordinates, so it has
+     * The menu overlay is positioned by hand in window coordinates, so it has
      * to know where the status bar / gesture indicator actually are.
      */
     private var insetTop = 0
     private var insetBottom = 0
+
+    /** SAF export/import via Activity Result API (no startActivityForResult). */
+    private val createAllowlistDoc =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            if (uri != null) {
+                writeAllowlistTo(uri)
+            }
+        }
+    private val openAllowlistDoc =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) {
+                readAllowlistFrom(uri)
+            }
+        }
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))
@@ -367,12 +382,7 @@ class AboutActivity : AppCompatActivity() {
 
     private fun exportAllowlist() {
         try {
-            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-            intent.addCategory(Intent.CATEGORY_OPENABLE)
-            intent.type = "text/plain"
-            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            intent.putExtra(Intent.EXTRA_TITLE, "fcmlive-allowlist.txt")
-            startActivityForResult(intent, REQ_EXPORT)
+            createAllowlistDoc.launch("fcmlive-allowlist.txt")
         } catch (t: Throwable) {
             toastShort(R.string.allowlist_export_failed)
         }
@@ -380,25 +390,9 @@ class AboutActivity : AppCompatActivity() {
 
     private fun importAllowlist() {
         try {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-            intent.addCategory(Intent.CATEGORY_OPENABLE)
-            intent.type = "text/plain"
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            startActivityForResult(intent, REQ_IMPORT)
+            openAllowlistDoc.launch(arrayOf("text/plain"))
         } catch (t: Throwable) {
             toastShort(R.string.allowlist_import_failed)
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != RESULT_OK || data == null) {
-            return
-        }
-        val uri = data.data ?: return
-        when (requestCode) {
-            REQ_EXPORT -> writeAllowlistTo(uri)
-            REQ_IMPORT -> readAllowlistFrom(uri)
         }
     }
 
@@ -594,15 +588,12 @@ class AboutActivity : AppCompatActivity() {
         }
 
         val loc = IntArray(2)
-        anchor.getLocationOnScreen(loc)
+        anchor.getLocationInWindow(loc)
         val gap = dp(8)
         val x = loc[0] + (anchor.width - tipView.measuredWidth) / 2
         val y = loc[1] + anchor.height + gap
-        val decor = window?.decorView
-        val decorLoc = IntArray(2)
-        decor?.getLocationOnScreen(decorLoc)
         try {
-            popup.showAtLocation(anchor, Gravity.NO_GRAVITY, x - decorLoc[0], y - decorLoc[1])
+            popup.showAtLocation(anchor, Gravity.NO_GRAVITY, x, y)
             activeTooltip = popup
         } catch (ignored: Throwable) {
         }
@@ -728,9 +719,10 @@ class AboutActivity : AppCompatActivity() {
         //      option at full size; hiding options behind a scroll is not.
         val rtl = resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
         val anchorLoc = IntArray(2)
-        anchor.getLocationOnScreen(anchorLoc)
+        anchor.getLocationInWindow(anchorLoc)
         val anchorGap = dp(MENU_ANCHOR_GAP_DP)
-        val screenH = resources.displayMetrics.heightPixels
+        val windowH = window?.decorView?.height ?: 0
+        val screenH = if (windowH > 0) windowH else resources.displayMetrics.heightPixels
         val outer = dp(MENU_OUTER_PAD_DP)
         val rowH = dp(MENU_ITEM_HEIGHT_DP)
         val itemGap = dp(MENU_ITEM_GAP_DP)
@@ -826,9 +818,8 @@ class AboutActivity : AppCompatActivity() {
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, panelH)
         )
 
-        val decor = window?.decorView
-        val decorLoc = IntArray(2)
-        decor?.getLocationOnScreen(decorLoc)
+        // Window coordinates throughout: freeform / split-screen windows are
+        // not the display, and screen coords would drop the panel mid-window.
         // Pull the panel in from the card's edge: flush against it, the menu
         // ends up brushing the screen edge, which looks cramped.
         val inset = dp(MENU_EDGE_INSET_DP)
@@ -839,8 +830,8 @@ class AboutActivity : AppCompatActivity() {
         }
 
         val panelLp = FrameLayout.LayoutParams(panelW, panelH)
-        panelLp.leftMargin = panelStart - decorLoc[0]
-        panelLp.topMargin = panelTop - decorLoc[1]
+        panelLp.leftMargin = panelStart
+        panelLp.topMargin = panelTop
 
         val overlay = FrameLayout(this)
         overlay.clipChildren = false
@@ -1132,8 +1123,6 @@ class AboutActivity : AppCompatActivity() {
 
     companion object {
         private const val REPO_URL = "https://github.com/iamqwert/HyperOS_FCM_Live"
-        private const val REQ_EXPORT = 2001
-        private const val REQ_IMPORT = 2002
 
         /** Easter egg: 7 taps on the version row within 2s, then silent for 10s. */
 
