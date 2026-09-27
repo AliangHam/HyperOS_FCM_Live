@@ -49,9 +49,9 @@
     <!-- Darkened for WCAG AA (>=4.5:1 on card/page). -->
     <color name="md_hint_light">#7A656A</color>
 
-    <!-- Inverse surface tooltips (always contrast against the app surface). -->
-    <color name="md_tooltip_bg">#FF1C1B1F</color>
-    <color name="md_tooltip_text">#FFFFFFFF</color>
+    <!-- Tooltips: light mode uses the pale bubble (former dark-mode style). -->
+    <color name="md_tooltip_bg">#FFE6E0E5</color>
+    <color name="md_tooltip_text">#FF322F37</color>
 
     <!-- Overflow menu: the page colour, so the menu and the page agree. -->
     <color name="md_popup_menu_bg">#F2F2F3</color>
