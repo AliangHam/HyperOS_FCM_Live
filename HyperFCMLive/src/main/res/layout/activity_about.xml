@@ -543,129 +543,6 @@
                 android:paddingTop="28dp"
                 android:paddingEnd="8dp"
                 android:paddingBottom="12dp"
-                android:text="@string/about_section_privacy"
-                android:textColor="@color/md_primary"
-                style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card_group_top_ripple"
-                android:clickable="false"
-                android:focusable="false"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="14dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_perm_query_all"
-                    android:textColor="@color/md_on_surface"
-                    style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_perm_query_all_desc"
-                    android:textColor="@color/md_on_surface_variant"
-                    style="@style/TextAppearance.HyperFCMLive.BodySmall" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:background="@drawable/bg_card_group_middle_ripple"
-                android:clickable="false"
-                android:focusable="false"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="14dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_perm_get_installed"
-                    android:textColor="@color/md_on_surface"
-                    style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_perm_get_installed_desc"
-                    android:textColor="@color/md_on_surface_variant"
-                    style="@style/TextAppearance.HyperFCMLive.BodySmall" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:background="@drawable/bg_card_group_bottom_ripple"
-                android:clickable="false"
-                android:focusable="false"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="14dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_perm_internet"
-                    android:textColor="@color/md_on_surface"
-                    style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_perm_internet_desc"
-                    android:textColor="@color/md_on_surface_variant"
-                    style="@style/TextAppearance.HyperFCMLive.BodySmall" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/bg_card_single_ripple"
-                android:clickable="false"
-                android:focusable="false"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="14dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_commitment"
-                    android:textColor="@color/md_on_surface"
-                    style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/privacy_commitment_desc"
-                    android:textColor="@color/md_on_surface_variant"
-                    style="@style/TextAppearance.HyperFCMLive.BodySmall" />
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-medium"
-                android:paddingStart="8dp"
-                android:paddingTop="28dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="12dp"
                 android:text="@string/about_section_project"
                 android:textColor="@color/md_primary"
                 style="@style/TextAppearance.HyperFCMLive.BodyMedium" />
@@ -725,6 +602,66 @@
                     android:layout_marginStart="8dp"
                     android:background="@drawable/bg_badge_dot"
                     android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Privacy entry: same card chrome as the rest of the About group,
+                 plus a trailing chevron because it navigates to PrivacyActivity. -->
+            <LinearLayout
+                android:id="@+id/row_privacy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/bg_card_group_middle_ripple"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:minHeight="72dp"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="14dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="14dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_privacy"
+                    android:tint="@color/md_icon_tint" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:text="@string/about_section_privacy"
+                        android:textColor="@color/md_on_surface"
+                        style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:text="@string/about_sub_privacy"
+                        android:textColor="@color/md_on_surface_variant"
+                        style="@style/TextAppearance.HyperFCMLive.BodySmall" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="8dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_chevron_end"
+                    android:tint="@color/md_icon_tint" />
             </LinearLayout>
 
             <LinearLayout

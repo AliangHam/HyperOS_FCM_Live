@@ -214,9 +214,9 @@ class LicensesActivity : AppCompatActivity() {
     }
 
     /**
-     * Monospace license body plus the two action pills from the reference
-     * shots: outlined 「查看源代码」 and filled 「关闭」 on the M3 filled-button
-     * roles (colorPrimary / colorOnPrimary).
+     * Monospace license body plus the two action pills: outlined 「查看源代码」
+     * on the left and filled 「关闭」 on the right, both equal-width so the
+     * row reads as a balanced pair rather than two text-width chips.
      */
     private fun styleLicenseDialog(dialog: AlertDialog, sourceUrl: String?) {
         dialog.findViewById<TextView>(android.R.id.message)?.typeface = Typeface.MONOSPACE
@@ -241,6 +241,48 @@ class LicensesActivity : AppCompatActivity() {
             dialog.dismiss()
             openUrl(sourceUrl)
         }
+
+        layoutDialogButtons(source, close)
+    }
+
+    /**
+     * Force the action row to 「查看源代码」 | 「关闭」 with equal weights.
+     * Material's default button bar sizes pills to their labels, so the
+     * longer source label used to dominate the row; width=0 + weight=1
+     * makes both buttons the same size and keeps negative on the left.
+     */
+    private fun layoutDialogButtons(source: android.widget.Button, close: android.widget.Button) {
+        val parent = source.parent as? LinearLayout ?: return
+        parent.orientation = LinearLayout.HORIZONTAL
+        parent.gravity = android.view.Gravity.CENTER_VERTICAL
+        parent.layoutParams = parent.layoutParams?.apply {
+            width = ViewGroup.LayoutParams.MATCH_PARENT
+        } ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        // Enforce left = source, right = close regardless of add order.
+        parent.removeAllViews()
+        val sharedWidth = 0
+        val sharedWeight = 1f
+        val sourceLp = LinearLayout.LayoutParams(
+            sharedWidth,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            sharedWeight
+        )
+        sourceLp.marginStart = dp(4)
+        sourceLp.marginEnd = dp(4)
+        val closeLp = LinearLayout.LayoutParams(
+            sharedWidth,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            sharedWeight
+        )
+        closeLp.marginStart = dp(4)
+        closeLp.marginEnd = dp(4)
+        source.layoutParams = sourceLp
+        close.layoutParams = closeLp
+        source.minimumWidth = 0
+        close.minimumWidth = 0
+        parent.addView(source)
+        parent.addView(close)
     }
 
     /**
@@ -378,7 +420,9 @@ class LicensesActivity : AppCompatActivity() {
             arrayOf("HappyMax0/FCMPushViewer", "Apache License 2.0", "https://github.com/HappyMax0/FCMPushViewer"),
             arrayOf("Howard20181/HyperOS_FCM_Live", "GPL-3.0", "https://github.com/Howard20181/HyperOS_FCM_Live"),
             arrayOf("Kr328/HyperOSFCMFix", "MIT License", "https://github.com/Kr328/HyperOSFCMFix"),
+            arrayOf("Kwensiu/DPIS", "GPL-3.0", "https://github.com/Kwensiu/DPIS"),
             arrayOf("ReedGAOOO/FCMGuard-HyperOS", "MIT License", "https://github.com/ReedGAOOO/FCMGuard-HyperOS"),
+            arrayOf("wxxsfxyzm/InstallerX-Revived", "GPL-3.0", "https://github.com/wxxsfxyzm/InstallerX-Revived"),
             arrayOf("zuohl/HyperOS_FCM_Live", "GPL-3.0", "https://github.com/zuohl/HyperOS_FCM_Live"),
         )
     }

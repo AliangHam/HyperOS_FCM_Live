@@ -127,6 +127,9 @@ class AboutActivity : AppCompatActivity() {
         bindRow(R.id.row_open_source_licenses) {
             startActivity(Intent(this, LicensesActivity::class.java))
         }
+        bindRow(R.id.row_privacy) {
+            startActivity(Intent(this, PrivacyActivity::class.java))
+        }
         bindRow(R.id.row_export_allowlist, this::exportAllowlist)
         bindRow(R.id.row_import_allowlist, this::importAllowlist)
         bindRow(R.id.row_check_update, this::checkForUpdates)

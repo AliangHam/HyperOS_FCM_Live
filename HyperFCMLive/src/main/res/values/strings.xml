@@ -49,7 +49,10 @@
     <string name="about_sub_export">将白名单保存为文本文件</string>
     <string name="about_sub_import">从文本文件恢复白名单</string>
     <string name="about_sub_source">本项目采用 GNU GPL-3.0 协议</string>
+    <string name="about_sub_privacy">权限用途与隐私承诺</string>
     <string name="about_sub_licenses">本应用使用的开源组件</string>
+    <string name="privacy_section_perms">应用权限</string>
+    <string name="privacy_section_commitment">隐私承诺</string>
     <string name="view_source_code">查看源代码</string>
     <string name="dialog_close">关闭</string>
     <string name="check_for_updates">检查更新</string>
