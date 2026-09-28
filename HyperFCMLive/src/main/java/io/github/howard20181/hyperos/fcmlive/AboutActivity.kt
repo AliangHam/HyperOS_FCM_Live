@@ -130,6 +130,8 @@ class AboutActivity : AppCompatActivity() {
         bindRow(R.id.row_privacy) {
             startActivity(Intent(this, PrivacyActivity::class.java))
         }
+        // Keep launcher shortcut icons in sync when the settings page opens.
+        ShortcutPublisher.publish(this)
         bindRow(R.id.row_export_allowlist, this::exportAllowlist)
         bindRow(R.id.row_import_allowlist, this::importAllowlist)
         bindRow(R.id.row_check_update, this::checkForUpdates)

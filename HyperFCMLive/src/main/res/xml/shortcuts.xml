@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher long-press shortcuts. Attached to LauncherAlias.
-     「设置」→ AboutActivity（标题为设置）；「帮助」→ HelpActivity。 -->
+<!-- Launcher long-press shortcuts. Icons are PNG tiles (drawable-xxhdpi)
+     so MIUI/HyperOS launchers render the rounded background reliably. -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
 
     <shortcut

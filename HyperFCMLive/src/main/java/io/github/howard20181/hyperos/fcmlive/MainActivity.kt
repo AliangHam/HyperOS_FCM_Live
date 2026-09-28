@@ -81,6 +81,21 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     private var currentQuery = ""
     private var showSystemApps = false
 
+    /** Empty-list toast is delayed and cancelled if a rescan fills the list. */
+    private val emptyListToastRunnable = Runnable {
+        emptyListToastRunnablePosted = false
+        if (!packagesReady || currentQuery.isNotEmpty()) return@Runnable
+        if (filteredApps.isNotEmpty() || allApps.isEmpty()) return@Runnable
+        if (!showFcmSupportedOnly && !excludeMiPushApps) return@Runnable
+        if (!isAppListReadable()) return@Runnable
+        Toast.makeText(
+            this,
+            if (showFcmSupportedOnly) R.string.no_fcm_apps_found else R.string.no_apps_found,
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+    private var emptyListToastRunnablePosted = false
+
     /** Overflow: when true, list only apps whose Manifest has FCM-style receivers. */
     private var showFcmSupportedOnly = false
 
@@ -177,6 +192,9 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             .getBoolean(Prefs.KEY_EXCLUDE_MIPUSH, false)
 
         initXposedService()
+
+        // Refresh launcher shortcut icons (MIUI caches static shortcuts).
+        ShortcutPublisher.publish(this)
 
         // Launcher long-press shortcuts (see res/xml/shortcuts.xml).
         handleShortcutIntent(intent)
@@ -625,6 +643,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     override fun onDestroy() {
         dismissActiveTooltip()
         dismissOverflowMenu()
+        cancelEmptyListToast()
         pendingFilter?.let {
             uiHandler.removeCallbacks(it)
             pendingFilter = null
@@ -1209,15 +1228,20 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     /**
      * Empty list after a full package scan (no search query), where one of the
      * two overflow filters is what emptied it.
+     *
+     * The toast is delayed: a permission grant mid-scan can finish an empty
+     * query first, and saying "no FCM apps" then would fire before the real
+     * list lands. Cancelled when a later snapshot fills the list.
      */
     private fun maybeToastNoFcmApps() {
+        cancelEmptyListToast()
         if (!packagesReady) {
             return
         }
         if (currentQuery.isNotEmpty()) {
             return
         }
-        if (filteredApps.isNotEmpty()) {
+        if (filteredApps.isNotEmpty() || allApps.isEmpty()) {
             return
         }
         // With both filters off an empty list means the scan found nothing, and
@@ -1225,21 +1249,18 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         if (!showFcmSupportedOnly && !excludeMiPushApps) {
             return
         }
-        // Empty only means "the filter hid them" when the package list itself was
-        // readable. On HyperOS the very first launch scans while the app-list
-        // permission is still unanswered, the query returns almost nothing, and
-        // saying "no supported apps" then would blame the device for a question
-        // the user has not been asked yet.
         if (!isAppListReadable()) {
             return
         }
-        // The FCM wording stays for the case that existed before; the excluded
-        // one names the filters, since either can be what emptied the list.
-        Toast.makeText(
-            this,
-            if (showFcmSupportedOnly) R.string.no_fcm_apps_found else R.string.no_apps_found,
-            Toast.LENGTH_SHORT
-        ).show()
+        emptyListToastRunnablePosted = true
+        uiHandler.postDelayed(emptyListToastRunnable, 1500)
+    }
+
+    private fun cancelEmptyListToast() {
+        if (emptyListToastRunnablePosted) {
+            uiHandler.removeCallbacks(emptyListToastRunnable)
+            emptyListToastRunnablePosted = false
+        }
     }
 
     private fun openFcmDiagnostics() {
