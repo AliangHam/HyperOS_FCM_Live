@@ -61,8 +61,7 @@ fun PrivacyScreen() {
 
             SectionTitle(R.string.privacy_section_commitment)
             PrivacyCard {
-                BodyTitle(R.string.privacy_commitment)
-                BodyText(R.string.privacy_commitment_desc, topPadding = 4.dp)
+                BodyText(R.string.privacy_commitment_desc)
             }
         }
     }
