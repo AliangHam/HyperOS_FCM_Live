@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher long-press shortcuts. Attached to LauncherAlias in the manifest.
-     「设置」是 About 页（标题即「设置」），不是主列表。 -->
+<!-- Launcher long-press shortcuts. Attached to LauncherAlias.
+     「设置」→ AboutActivity（标题为设置）；「帮助」→ HelpActivity。 -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
 
     <shortcut
@@ -13,6 +13,18 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="io.github.howard20181.hyperos.fcmlive"
             android:targetClass="io.github.howard20181.hyperos.fcmlive.AboutActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="help"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_help"
+        android:shortcutShortLabel="@string/help"
+        android:shortcutLongLabel="@string/shortcut_help_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.howard20181.hyperos.fcmlive"
+            android:targetClass="io.github.howard20181.hyperos.fcmlive.HelpActivity" />
     </shortcut>
 
     <shortcut

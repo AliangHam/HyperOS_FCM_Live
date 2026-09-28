@@ -116,6 +116,7 @@
     <string name="fcm_diagnostics_not_found">当前设备无法打开 FCM 诊断界面。</string>
     <string name="shortcut_settings">设置</string>
     <string name="shortcut_settings_long">打开模块设置</string>
+    <string name="shortcut_help_long">查看帮助</string>
     <string name="shortcut_fcm_diagnostics_long">查看 FCM 诊断</string>
 
     <!-- 帮助页。文案必须与 Hooker 的实际行为一致：
