@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher long-press shortcuts. Attached to LauncherAlias in the manifest.
+     Labels stay in strings.xml so they follow the app locale. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="settings"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_settings"
+        android:shortcutShortLabel="@string/shortcut_settings"
+        android:shortcutLongLabel="@string/shortcut_settings_long">
+        <intent
+            android:action="io.github.howard20181.hyperos.fcmlive.SETTINGS"
+            android:targetPackage="io.github.howard20181.hyperos.fcmlive"
+            android:targetClass="io.github.howard20181.hyperos.fcmlive.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="fcm_diagnostics"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_fcm"
+        android:shortcutShortLabel="@string/fcm_diagnostics"
+        android:shortcutLongLabel="@string/shortcut_fcm_diagnostics_long">
+        <intent
+            android:action="io.github.howard20181.hyperos.fcmlive.FCM_DIAGNOSTICS"
+            android:targetPackage="io.github.howard20181.hyperos.fcmlive"
+            android:targetClass="io.github.howard20181.hyperos.fcmlive.MainActivity" />
+    </shortcut>
+</shortcuts>

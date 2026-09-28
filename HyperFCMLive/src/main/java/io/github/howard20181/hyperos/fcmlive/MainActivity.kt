@@ -178,6 +178,9 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
         initXposedService()
 
+        // Launcher long-press shortcuts (see res/xml/shortcuts.xml).
+        handleShortcutIntent(intent)
+
         adapter = AppListAdapter(this, filteredApps, object : AppListAdapter.OnCardListener {
             override fun onToggleAllowlist(packageName: String, checked: Boolean) {
                 if (checked) {
@@ -1257,6 +1260,19 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
     }
 
+    /** Launcher shortcut entry: open GMS diagnostics immediately when asked. */
+    private fun handleShortcutIntent(intent: Intent?) {
+        if (intent?.action == ACTION_FCM_DIAGNOSTICS) {
+            openFcmDiagnostics()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShortcutIntent(intent)
+    }
+
     private fun sortApps() {
         allApps.sortWith { a, b -> compareEntries(a, b) }
     }
@@ -1506,6 +1522,9 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
     companion object {
         private const val TAG_UI = "HyperFCMLive"
+
+        /** Launcher shortcut: open GMS FCM diagnostics. */
+        const val ACTION_FCM_DIAGNOSTICS = "io.github.howard20181.hyperos.fcmlive.FCM_DIAGNOSTICS"
         /** MIUI 13 / HyperOS runtime gate on top of QUERY_ALL_PACKAGES. */
         private const val GET_INSTALLED_APPS_PERMISSION =
             "com.android.permission.GET_INSTALLED_APPS"

@@ -114,6 +114,9 @@
     <string name="more_menu">更多选项</string>
     <string name="fcm_diagnostics">FCM 诊断</string>
     <string name="fcm_diagnostics_not_found">当前设备无法打开 FCM 诊断界面。</string>
+    <string name="shortcut_settings">设置</string>
+    <string name="shortcut_settings_long">打开模块设置</string>
+    <string name="shortcut_fcm_diagnostics_long">查看 FCM 诊断</string>
 
     <!-- 帮助页。文案必须与 Hooker 的实际行为一致：
          shouldWake：空名单或名单内 → 自启动判定、FLAG_INCLUDE_STOPPED_PACKAGES、2000ms 豁免；
