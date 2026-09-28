@@ -16,12 +16,10 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import io.github.howard20181.hyperos.fcmlive.mcu.Hct
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
-import kotlin.math.max
 
 /**
  * Open-source license list. Deps show version on the right; this project and
@@ -125,10 +123,12 @@ class LicensesActivity : AppCompatActivity() {
     private fun addSectionHeader(list: LinearLayout, inflater: LayoutInflater, title: String) {
         val header = TextView(this)
         header.text = title
-        // Same colour role as About's section titles (@color/md_primary).
-        header.setTextColor(ThemeEngine.palette(this).primary)
+        // Appearance first: setTextAppearance can repaint textColor, so the
+        // palette role has to be applied last. Same role as About's section
+        // titles (@color/md_primary).
         header.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         header.typeface = Typeface.create("sans-medium", Typeface.NORMAL)
+        header.setTextColor(ThemeEngine.palette(this).primary)
         header.setPadding(dp(8), dp(28), dp(8), dp(12))
         list.addView(header)
     }
@@ -215,17 +215,18 @@ class LicensesActivity : AppCompatActivity() {
 
     /**
      * Monospace license body plus the two action pills from the reference
-     * shots: outlined 「查看源代码」 and filled 「关闭」 whose fill is the dark
-     * tone of the current dynamic primary.
+     * shots: outlined 「查看源代码」 and filled 「关闭」 on the M3 filled-button
+     * roles (colorPrimary / colorOnPrimary).
      */
     private fun styleLicenseDialog(dialog: AlertDialog, sourceUrl: String?) {
         dialog.findViewById<TextView>(android.R.id.message)?.typeface = Typeface.MONOSPACE
         stripScrollEdgeHairlines(dialog)
 
+        val palette = ThemeEngine.palette(this)
+
         val close = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-        val fill = darkPrimaryFill()
-        close.background = pill(fill)
-        close.setTextColor(darkPrimaryOnFill())
+        close.background = pill(palette.primary)
+        close.setTextColor(palette.onPrimary)
         close.setPadding(dp(20), dp(10), dp(20), dp(10))
 
         val source = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
@@ -233,7 +234,6 @@ class LicensesActivity : AppCompatActivity() {
             source.visibility = View.GONE
             return
         }
-        val palette = ThemeEngine.palette(this)
         source.background = pill(Color.TRANSPARENT, palette.outline)
         source.setTextColor(palette.onSurface)
         source.setPadding(dp(20), dp(10), dp(20), dp(10))
@@ -276,17 +276,6 @@ class LicensesActivity : AppCompatActivity() {
         if (height in 1..dp(2)) {
             view.visibility = View.GONE
         }
-    }
-
-    /** Dark tonal step (≈ tone 32) of the current system-extracted primary. */
-    private fun darkPrimaryFill(): Int {
-        val hct = Hct.fromInt(ThemeEngine.palette(this).primary)
-        return Hct.from(hct.hue, max(hct.chroma, 24.0), 32.0).toInt()
-    }
-
-    private fun darkPrimaryOnFill(): Int {
-        val hct = Hct.fromInt(darkPrimaryFill())
-        return if (hct.tone < 50.0) Color.WHITE else 0xFF1C1B1F.toInt()
     }
 
     private fun pill(fill: Int, stroke: Int = Color.TRANSPARENT): GradientDrawable {
