@@ -122,6 +122,11 @@ class Hooker : XposedModule() {
             log(Log.ERROR, TAG, "Failed to hook BroadcastQueueModernStubImpl", t)
         }
         try {
+            hookGreezeBroadcastCache(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook greeze broadcast cache", t)
+        }
+        try {
             hookProcessPolicy(classLoader)
         } catch (t: Throwable) {
             log(Log.ERROR, TAG, "Failed to hook ProcessPolicy", t)
@@ -130,6 +135,11 @@ class Hooker : XposedModule() {
             hookAwareResourceControl(classLoader)
         } catch (t: Throwable) {
             log(Log.ERROR, TAG, "Failed to hook AwareResourceControl", t)
+        }
+        try {
+            hookSleepModeNetworkPolicy(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook sleep-mode network policy", t)
         }
         try {
             hookActivityManagerService(classLoader)
@@ -480,6 +490,111 @@ class Hooker : XposedModule() {
             chain.proceed()
         }
         deoptimize(checkApplicationAutoStartMethod)
+
+        // Second greeze gate. checkApplicationAutoStart only covers the cold-start
+        // (ResolveInfo) path; a warm but frozen receiver goes through this one, which
+        // asks GreezeManagerService#isRestrictReceiver. An earlier revision
+        // short-circuited BroadcastQueueModernStubImpl#checkReceiverIfRestricted, which
+        // skipped the thawUidAsync("bc_action") that isRestrictReceiver performs on its
+        // native pass-through path: the broadcast was dispatched to a still-frozen
+        // process, no one ever thawed it, and GMS retried the same message forever
+        // ("No response to broadcast"). Hook isRestrictReceiver itself instead — answer
+        // false (not restricted) and reproduce the native thaw before delivering.
+        try {
+            val GreezeManagerServiceClass =
+                classLoader.loadClass("com.miui.server.greeze.GreezeManagerService")
+            val isRestrictReceiverMethod = GreezeManagerServiceClass.getDeclaredMethod(
+                "isRestrictReceiver",
+                Intent::class.java,
+                Int::class.javaPrimitiveType,
+                String::class.java,
+                Int::class.javaPrimitiveType,
+                String::class.java
+            )
+            val thawUidAsyncMethod = GreezeManagerServiceClass.getDeclaredMethod(
+                "thawUidAsync",
+                Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType,
+                String::class.java
+            )
+            hookE(isRestrictReceiverMethod).intercept { chain: XposedInterface.Chain ->
+                try {
+                    val intent = chain.getArg(0) as? Intent
+                    val callerPackage = chain.getArg(2) as? String
+                    val calleeUid = chain.getArg(3) as Int
+                    val calleePackage = chain.getArg(4) as? String
+                    if (GMS_PACKAGE_NAME == callerPackage &&
+                        intent != null &&
+                        ACTION_REMOTE_INTENT == intent.action &&
+                        shouldWake(calleePackage)
+                    ) {
+                        // Same reason string and caller uid the native pass-through
+                        // path uses, so greeze bookkeeping stays consistent.
+                        thawUidAsyncMethod.invoke(chain.thisObject, calleeUid, 1000, "bc_action")
+                        return@intercept false
+                    }
+                } catch (e: Exception) {
+                    log(
+                        Log.ERROR, TAG,
+                        "Failed to modify GreezeManagerService#isRestrictReceiver", e
+                    )
+                }
+                chain.proceed()
+            }
+            deoptimize(isRestrictReceiverMethod)
+        } catch (e: NoSuchMethodException) {
+            logSkip("GreezeManagerService#isRestrictReceiver absent, skip")
+        } catch (e: ClassNotFoundException) {
+            logSkip("GreezeManagerService absent, isRestrictReceiver not hooked")
+        }
+    }
+
+    /**
+     * Stops greeze from parking a c2dm broadcast instead of delivering it.
+     *
+     * GreezeManagerService#isNeedCachedBroadcast(Intent, int uid, String pkg) runs after
+     * the receiver has been found frozen and returns true to mean "cache this broadcast
+     * and replay it once the target thaws". That is the mechanism behind a broadcast
+     * showing up as delivered in the AMS log while the app stays silent until the next
+     * unlock. Answering false for c2dm keeps the normal delivery path.
+     *
+     * The uid argument is deliberately unused: it identifies the frozen receiver, and the
+     * allowlist the user configured is expressed in package names.
+     */
+    private fun hookGreezeBroadcastCache(classLoader: ClassLoader) {
+        try {
+            val GreezeManagerServiceClass =
+                classLoader.loadClass("com.miui.server.greeze.GreezeManagerService")
+            val isNeedCachedBroadcastMethod = GreezeManagerServiceClass.getDeclaredMethod(
+                "isNeedCachedBroadcast",
+                Intent::class.java,
+                Int::class.javaPrimitiveType,
+                String::class.java
+            )
+            hookE(isNeedCachedBroadcastMethod).intercept { chain: XposedInterface.Chain ->
+                try {
+                    val intent = chain.getArg(0) as? Intent
+                    val packageName = chain.getArg(2) as? String
+                    if (intent != null &&
+                        ACTION_REMOTE_INTENT == intent.action &&
+                        shouldWake(packageName)
+                    ) {
+                        return@intercept false
+                    }
+                } catch (e: Exception) {
+                    log(
+                        Log.ERROR, TAG,
+                        "Failed to modify GreezeManagerService#isNeedCachedBroadcast", e
+                    )
+                }
+                chain.proceed()
+            }
+            deoptimize(isNeedCachedBroadcastMethod)
+        } catch (e: ClassNotFoundException) {
+            logSkip("GreezeManagerService absent, broadcast cache not hooked")
+        } catch (e: NoSuchMethodException) {
+            logSkip("GreezeManagerService#isNeedCachedBroadcast absent, skip")
+        }
     }
 
     private fun hookProcessPolicy(classLoader: ClassLoader) {
@@ -599,6 +714,102 @@ class Hooker : XposedModule() {
             }
         }
         return systemContext
+    }
+
+    /**
+     * MIUI 睡眠模式（PhoneSleepModeController）入睡后会打开一条断网链，
+     * 只放行 `sleep_mode_network_white_apps` 名单中的应用，其余整夜掐网。
+     * GMS 默认不在名单里，于是 FCM 长连接被静默切断 —— 表现就是
+     * "FCM 以为只是网络断了"，直到心跳超时重连才恢复。
+     *
+     * 进入睡眠时 $45 广播接收器的顺序是：
+     *   setSleepModeWhitelistUidRules()   // 对 mSleepModeWhitelistUids 逐个下发 added=true
+     *   enableSleepModeChain(true)        // 打开断网链
+     * 所以只需在下发之前把 GMS 塞进名单，无需改动链开关的语义；
+     * 退出时 clearSleepModeWhitelistUidRules() 会对称撤销，不会留下残留规则。
+     */
+    private fun hookSleepModeNetworkPolicy(classLoader: ClassLoader) {
+        val serviceClass = try {
+            classLoader.loadClass("com.android.server.net.MiuiNetworkPolicyManagerService")
+        } catch (e: ClassNotFoundException) {
+            logSkip("MiuiNetworkPolicyManagerService class absent, skip")
+            return
+        }
+        val whitelistField = try {
+            serviceClass.getDeclaredField("mSleepModeWhitelistUids")
+        } catch (e: NoSuchFieldException) {
+            logSkip("MiuiNetworkPolicyManagerService.mSleepModeWhitelistUids absent, skip")
+            return
+        }
+        val applyMethod = try {
+            serviceClass.getDeclaredMethod("setSleepModeWhitelistUidRules")
+        } catch (e: NoSuchMethodException) {
+            logSkipOtherGeneration(
+                "MiuiNetworkPolicyManagerService#setSleepModeWhitelistUidRules absent, skip"
+            )
+            return
+        }
+        whitelistField.isAccessible = true
+        applyMethod.isAccessible = true
+        hookE(applyMethod).intercept { chain: XposedInterface.Chain ->
+            try {
+                addGmsToSleepModeWhitelist(whitelistField, chain.thisObject)
+            } catch (t: Throwable) {
+                log(Log.ERROR, TAG, "Failed to extend sleep-mode network whitelist", t)
+            }
+            chain.proceed()
+        }
+        deoptimize(applyMethod)
+        log(Log.INFO, TAG, "Sleep-mode network whitelist hooked: GMS will stay online overnight")
+
+        // Belt and braces: if GMS did lose its connection overnight (older ROM
+        // without the whitelist hook above, or the rule never reached netd),
+        // the socket is stale by the time the chain comes down. Nudge GMS to
+        // drop it and reconnect instead of waiting for the next heartbeat.
+        val chainMethod = try {
+            serviceClass.getDeclaredMethod(
+                "enableSleepModeChain", Boolean::class.javaPrimitiveType
+            )
+        } catch (e: NoSuchMethodException) {
+            logSkipOtherGeneration(
+                "MiuiNetworkPolicyManagerService#enableSleepModeChain absent, skip"
+            )
+            return
+        }
+        chainMethod.isAccessible = true
+        hookE(chainMethod).intercept { chain: XposedInterface.Chain ->
+            val enabling = chain.getArg(0) == true
+            chain.proceed()
+            if (!enabling) {
+                log(Log.INFO, TAG, "Sleep mode exited: network restored, nudging GMS to reconnect")
+                val context = getSystemContext()
+                if (context != null) {
+                    Thread { recoverGmsConnection(context) }.start()
+                }
+            }
+        }
+        deoptimize(chainMethod)
+    }
+
+    /**
+     * Adds GMS to the "keep network during sleep mode" set. Called on the
+     * service's own handler thread, right before the rules are pushed to
+     * ConnectivityManager, so no other thread observes a half-updated set.
+     */
+    private fun addGmsToSleepModeWhitelist(whitelistField: Field, owner: Any) {
+        val raw = whitelistField.get(owner)
+        if (raw !is MutableCollection<*>) {
+            return
+        }
+        @Suppress("UNCHECKED_CAST")
+        val whitelist = raw as MutableCollection<Any?>
+        val uid = gmsUid() ?: return
+        if (whitelist.add(uid)) {
+            log(
+                Log.INFO, TAG,
+                "Sleep mode entering: kept GMS (uid $uid) on the network whitelist"
+            )
+        }
     }
 
     private fun hookForceFalse(owner: Class<*>, name: String) {
