@@ -876,7 +876,7 @@ class Hooker : XposedModule() {
             logSkip("UserConfigureHelper class absent, skip")
         }
 
-        // Any user-config writer can put GMS back to miuiAuto; re-assert after.
+        // Any user-config writer can put GMS back to miuiAuto; force and re-assert.
         try {
             val writerClass =
                 classLoader.loadClass("com.miui.powerkeeper.provider.UserConfigureHelper")
@@ -889,8 +889,28 @@ class Hooker : XposedModule() {
                         name.contains("modify", ignoreCase = true) ||
                         name.contains("setBg", ignoreCase = true)
                 if (!looksWriter || name.contains("get", ignoreCase = true)) continue
+                val isBgControlSetter = name.contains("setBgControl", ignoreCase = true)
                 hookE(method).intercept { chain: XposedInterface.Chain ->
-                    val result = chain.proceed()
+                    val rawArgs = chain.args
+                    var args: Array<Any?>? = null
+                    if (isBgControlSetter) {
+                        val copy = rawArgs.toTypedArray()
+                        val touchesGms = copy.any { it == GMS_PACKAGE_NAME }
+                        if (touchesGms) {
+                            for (i in copy.indices) {
+                                val a = copy[i]
+                                if (a is String && a != GMS_PACKAGE_NAME && a != COL_BG_CONTROL) {
+                                    copy[i] = BG_CONTROL_NO_RESTRICT
+                                    log(
+                                        Log.INFO, TAG,
+                                        "setBgControl: forced GMS control $a -> $BG_CONTROL_NO_RESTRICT"
+                                    )
+                                }
+                            }
+                            args = copy
+                        }
+                    }
+                    val result = if (args != null) chain.proceed(args) else chain.proceed()
                     try {
                         ensureGmsUserTableBgControl()
                     } catch (t: Throwable) {
@@ -968,49 +988,60 @@ class Hooker : XposedModule() {
         if (userTableReassertInFlight) return
         userTableReassertInFlight = true
         try {
-            val context = getPowerKeeperContext() ?: getSystemContext() ?: return
+            val pk = getPowerKeeperContext()
+            val sys = getSystemContext()
+            val context = pk ?: sys
+            if (context == null) {
+                log(Log.WARN, TAG, "userTable: no Context (powerKeeper=$pk system=$sys), skip write-back")
+                return
+            }
+            log(Log.INFO, TAG, "userTable: ensure GMS bgControl via ${if (pk != null) "powerkeeper" else "system"}")
             val uri = android.net.Uri.parse(USER_TABLE_URI)
             var current: String? = null
-            context.contentResolver.query(
-                uri,
-                arrayOf(COL_BG_CONTROL),
-                "$COL_PKG_NAME = ?",
-                arrayOf(GMS_PACKAGE_NAME),
-                null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    current = cursor.getString(0)
+            try {
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(COL_BG_CONTROL),
+                    "$COL_PKG_NAME = ?",
+                    arrayOf(GMS_PACKAGE_NAME),
+                    null
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        current = cursor.getString(0)
+                    }
                 }
+            } catch (t: Throwable) {
+                log(Log.WARN, TAG, "userTable: query failed", t)
+                return
             }
+            log(Log.INFO, TAG, "userTable: GMS current bgControl=$current")
             if (current == BG_CONTROL_NO_RESTRICT) return
 
             val values = android.content.ContentValues()
             values.put(COL_BG_CONTROL, BG_CONTROL_NO_RESTRICT)
-            val updated = context.contentResolver.update(
-                uri,
-                values,
-                "$COL_PKG_NAME = ?",
-                arrayOf(GMS_PACKAGE_NAME)
-            )
-            if (updated > 0) {
-                log(
-                    Log.INFO, TAG,
-                    "userTable: GMS bgControl $current -> $BG_CONTROL_NO_RESTRICT"
+            try {
+                val updated = context.contentResolver.update(
+                    uri,
+                    values,
+                    "$COL_PKG_NAME = ?",
+                    arrayOf(GMS_PACKAGE_NAME)
                 )
-                return
+                log(Log.INFO, TAG, "userTable: update $current -> $BG_CONTROL_NO_RESTRICT count=$updated")
+                if (updated > 0) return
+            } catch (t: Throwable) {
+                log(Log.WARN, TAG, "userTable: update failed", t)
             }
-            // Row missing: insert a minimal one so the literal filter still matches.
             values.put(COL_PKG_NAME, GMS_PACKAGE_NAME)
             values.put(COL_USER_ID, 0)
             values.put(COL_LAST_CONFIGURED, System.currentTimeMillis())
             try {
-                context.contentResolver.insert(uri, values)
-                log(Log.INFO, TAG, "userTable: inserted GMS row bgControl=$BG_CONTROL_NO_RESTRICT")
+                val inserted = context.contentResolver.insert(uri, values)
+                log(Log.INFO, TAG, "userTable: insert result=$inserted")
             } catch (t: Throwable) {
                 log(Log.WARN, TAG, "userTable: insert GMS row failed", t)
             }
         } catch (t: Throwable) {
-            log(Log.WARN, TAG, "userTable: failed to set GMS bgControl=$BG_CONTROL_NO_RESTRICT", t)
+            log(Log.WARN, TAG, "userTable: ensure failed", t)
         } finally {
             userTableReassertInFlight = false
         }
@@ -1121,6 +1152,11 @@ class Hooker : XposedModule() {
                             Log.INFO, TAG,
                             "P3: rewrote GMS scenario $SCENARIO_MUI_AUTO_GMS → $SCENARIO_NO_RESTRICT"
                         )
+                    }
+                    try {
+                        ensureGmsUserTableBgControl()
+                    } catch (t: Throwable) {
+                        log(Log.WARN, TAG, "P3: userTable write-back failed", t)
                     }
                 } catch (t: Throwable) {
                     log(Log.ERROR, TAG, "P3: failed to rewrite GMS scenario", t)
