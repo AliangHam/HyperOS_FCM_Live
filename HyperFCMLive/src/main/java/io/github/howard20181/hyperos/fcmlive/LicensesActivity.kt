@@ -1,5 +1,6 @@
 package io.github.howard20181.hyperos.fcmlive
 
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Context
@@ -12,14 +13,14 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import io.github.howard20181.hyperos.fcmlive.theme.AppPalette
+import io.github.howard20181.hyperos.fcmlive.mcu.Hct
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
+import kotlin.math.max
 
 /**
  * Open-source license list. Deps show version on the right; this project and
@@ -75,7 +76,8 @@ class LicensesActivity : AppCompatActivity() {
             val row = inflater.inflate(R.layout.item_license_dep, list, false)
             bindRow(row, dep[0], dep[1], dep[2])
             val url = dep[3]
-            row.setOnClickListener { openUrl(url) }
+            val licenseRaw = licenseRawFor(dep[0], dep[2])
+            row.setOnClickListener { showProjectLicenseDialog(dep[0], licenseRaw, url) }
             addRow(list, row, i == 0, i == DEPS.size - 1)
         }
 
@@ -85,7 +87,8 @@ class LicensesActivity : AppCompatActivity() {
             val row = inflater.inflate(R.layout.item_license_ref, list, false)
             bindRow(row, ref[0], ref[1])
             val url = ref[2]
-            row.setOnClickListener { openUrl(url) }
+            val licenseRaw = licenseRawFor(ref[0], ref[1])
+            row.setOnClickListener { showProjectLicenseDialog(ref[0], licenseRaw, url) }
             addRow(list, row, i == 0, i == REFERENCES.size - 1)
         }
     }
@@ -163,16 +166,89 @@ class LicensesActivity : AppCompatActivity() {
         val text = readRawText(rawRes)
         try {
             ThemeSupport.withoutPalettePainting {
-                MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
+                val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
                     .setTitle(title)
                     .setMessage(text)
-                    .setPositiveButton(android.R.string.ok, null)
+                    .setPositiveButton(R.string.dialog_close, null)
                     .show()
+                styleLicenseDialog(dialog, sourceUrl = null)
             }
         } catch (t: Throwable) {
             // Never let a license viewer take the screen down.
             Toast.makeText(this, t.message ?: "dialog failed", Toast.LENGTH_LONG).show()
         }
+    }
+
+    /**
+     * License body for one dependency / reference project, with 「查看源代码」
+     * opening its repository and 「关闭」 dismissing the dialog.
+     */
+    private fun showProjectLicenseDialog(name: String, rawRes: Int, url: String) {
+        val text = readRawText(rawRes)
+        try {
+            ThemeSupport.withoutPalettePainting {
+                val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_HyperFCMLive_Dialog)
+                    .setTitle(name)
+                    .setMessage(text)
+                    .setNegativeButton(R.string.view_source_code, null)
+                    .setPositiveButton(R.string.dialog_close, null)
+                    .show()
+                styleLicenseDialog(dialog, sourceUrl = url)
+            }
+        } catch (t: Throwable) {
+            Toast.makeText(this, t.message ?: "dialog failed", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /**
+     * Monospace license body plus the two action pills from the reference
+     * shots: outlined 「查看源代码」 and filled 「关闭」 whose fill is the dark
+     * tone of the current dynamic primary.
+     */
+    private fun styleLicenseDialog(dialog: AlertDialog, sourceUrl: String?) {
+        dialog.findViewById<TextView>(android.R.id.message)?.typeface = Typeface.MONOSPACE
+
+        val close = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+        val fill = darkPrimaryFill()
+        close.background = pill(fill)
+        close.setTextColor(darkPrimaryOnFill())
+        close.setPadding(dp(20), dp(10), dp(20), dp(10))
+
+        val source = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+        if (sourceUrl == null) {
+            source.visibility = View.GONE
+            return
+        }
+        val palette = ThemeEngine.palette(this)
+        source.background = pill(Color.TRANSPARENT, palette.outline)
+        source.setTextColor(palette.onSurface)
+        source.setPadding(dp(20), dp(10), dp(20), dp(10))
+        source.setOnClickListener {
+            dialog.dismiss()
+            openUrl(sourceUrl)
+        }
+    }
+
+    /** Dark tonal step (≈ tone 32) of the current system-extracted primary. */
+    private fun darkPrimaryFill(): Int {
+        val hct = Hct.fromInt(ThemeEngine.palette(this).primary)
+        return Hct.from(hct.hue, max(hct.chroma, 24.0), 32.0).toInt()
+    }
+
+    private fun darkPrimaryOnFill(): Int {
+        val hct = Hct.fromInt(darkPrimaryFill())
+        return if (hct.tone < 50.0) Color.WHITE else 0xFF1C1B1F.toInt()
+    }
+
+    private fun pill(fill: Int, stroke: Int = Color.TRANSPARENT): GradientDrawable {
+        val d = GradientDrawable()
+        d.shape = GradientDrawable.RECTANGLE
+        d.cornerRadius = dp(28).toFloat()
+        d.setColor(fill)
+        if (stroke != Color.TRANSPARENT) {
+            d.setStroke(dp(1), stroke)
+        }
+        return d
     }
 
     private fun readRawText(rawRes: Int): String {
@@ -183,6 +259,21 @@ class LicensesActivity : AppCompatActivity() {
         } catch (t: Throwable) {
             ""
         }
+    }
+
+    /**
+     * Maps a list row to the LICENSE body as published on that project's
+     * GitHub repository. Shared SPDX texts (Apache/GPL/pure MIT) live in one
+     * raw file each; the MIT reference projects ship their own copyright
+     * line, so those keep a dedicated copy of their GitHub LICENSE.
+     */
+    private fun licenseRawFor(name: String, licenseLabel: String): Int = when {
+        name == "Kr328/HyperOSFCMFix" -> R.raw.license_mit_hyperosfcmfix
+        name == "ReedGAOOO/FCMGuard-HyperOS" -> R.raw.license_mit_fcmguard
+        licenseLabel.contains("Apache") -> R.raw.license_apache2
+        licenseLabel.contains("GPL") -> R.raw.license_gpl3
+        licenseLabel.contains("MIT") -> R.raw.license_mit
+        else -> R.raw.license_apache2
     }
 
     /** Same top-bar inset as MainActivity; list clears the gesture nav bar. */
