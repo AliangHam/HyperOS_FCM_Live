@@ -12,6 +12,7 @@ import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -62,11 +63,12 @@ class LicensesActivity : AppCompatActivity() {
         for (i in licenseNames.indices) {
             val row = inflater.inflate(R.layout.item_license_dep, list, false)
             bindRow(row, licenseNames[i], licenseHint)
-            val licenseLink = row.findViewById<View>(R.id.dep_link)
-            licenseLink?.visibility = View.GONE
             val title = licenseNames[i]
             val rawRes = licenseRaw[i]
-            row.setOnClickListener { showLicenseDialog(title, rawRes) }
+            row.setOnClickListener {
+                UiUtils.tapFeedback(it)
+                showLicenseDialog(title, rawRes)
+            }
             addRow(list, row, i == 0, i == licenseNames.size - 1)
         }
 
@@ -77,7 +79,10 @@ class LicensesActivity : AppCompatActivity() {
             bindRow(row, dep[0], dep[1], dep[2])
             val url = dep[3]
             val licenseRaw = licenseRawFor(dep[0], dep[2])
-            row.setOnClickListener { showProjectLicenseDialog(dep[0], licenseRaw, url) }
+            row.setOnClickListener {
+                UiUtils.tapFeedback(it)
+                showProjectLicenseDialog(dep[0], licenseRaw, url)
+            }
             addRow(list, row, i == 0, i == DEPS.size - 1)
         }
 
@@ -88,24 +93,32 @@ class LicensesActivity : AppCompatActivity() {
             bindRow(row, ref[0], ref[1])
             val url = ref[2]
             val licenseRaw = licenseRawFor(ref[0], ref[1])
-            row.setOnClickListener { showProjectLicenseDialog(ref[0], licenseRaw, url) }
+            row.setOnClickListener {
+                UiUtils.tapFeedback(it)
+                showProjectLicenseDialog(ref[0], licenseRaw, url)
+            }
             addRow(list, row, i == 0, i == REFERENCES.size - 1)
         }
     }
 
     /** Two-line row (name + license) for this project / references. */
     private fun bindRow(row: View, name: String, license: String) {
+        val palette = ThemeEngine.palette(this)
         val nameView = row.findViewById<TextView>(R.id.dep_name)
         val licenseView = row.findViewById<TextView>(R.id.dep_license)
         nameView?.text = name
+        nameView?.setTextColor(palette.onSurface)
         licenseView?.text = license
+        licenseView?.setTextColor(palette.onSurfaceVariant)
     }
 
     /** Dep row: name + version on the right, license below. */
     private fun bindRow(row: View, name: String, version: String?, license: String) {
         bindRow(row, name, license)
+        val palette = ThemeEngine.palette(this)
         val versionView = row.findViewById<TextView>(R.id.dep_version)
         versionView?.text = version ?: ""
+        versionView?.setTextColor(palette.onSurfaceVariant)
     }
 
     /** Section header styled exactly like the About page groups. */
@@ -113,7 +126,7 @@ class LicensesActivity : AppCompatActivity() {
         val header = TextView(this)
         header.text = title
         // Same colour role as About's section titles (@color/md_primary).
-        header.setTextColor(getColor(R.color.md_primary))
+        header.setTextColor(ThemeEngine.palette(this).primary)
         header.setTextAppearance(R.style.TextAppearance_HyperFCMLive_BodyMedium)
         header.typeface = Typeface.create("sans-medium", Typeface.NORMAL)
         header.setPadding(dp(8), dp(28), dp(8), dp(12))
@@ -207,6 +220,7 @@ class LicensesActivity : AppCompatActivity() {
      */
     private fun styleLicenseDialog(dialog: AlertDialog, sourceUrl: String?) {
         dialog.findViewById<TextView>(android.R.id.message)?.typeface = Typeface.MONOSPACE
+        stripScrollEdgeHairlines(dialog)
 
         val close = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
         val fill = darkPrimaryFill()
@@ -226,6 +240,41 @@ class LicensesActivity : AppCompatActivity() {
         source.setOnClickListener {
             dialog.dismiss()
             openUrl(sourceUrl)
+        }
+    }
+
+    /**
+     * Hide the 1dp scroll-edge indicators Material draws while a long license
+     * body scrolls. They read as separator rules under the title and above the
+     * action row. Only the views are toggled — theme colour attributes are
+     * left alone, which is what previously broke the palette when the
+     * separators were stripped at the style level.
+     */
+    private fun stripScrollEdgeHairlines(dialog: AlertDialog) {
+        for (pkg in arrayOf("com.google.android.material", "androidx.appcompat", "android")) {
+            for (name in arrayOf("scrollIndicatorUp", "scrollIndicatorDown", "titleDivider")) {
+                val id = resources.getIdentifier(name, "id", pkg)
+                if (id != 0) {
+                    dialog.findViewById<View>(id)?.visibility = View.GONE
+                }
+            }
+        }
+        dialog.window?.decorView?.let { hideHairlineViews(it) }
+    }
+
+    /** Fallback: any 1dp-tall chrome view inside the dialog is a separator. */
+    private fun hideHairlineViews(view: View) {
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                hideHairlineViews(view.getChildAt(i))
+            }
+        }
+        if (view is TextView || view is android.widget.Button) {
+            return
+        }
+        val height = view.layoutParams?.height ?: return
+        if (height in 1..dp(2)) {
+            view.visibility = View.GONE
         }
     }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Reference / this-project row: name + license stacked; link icon vertically centered.
+<!-- Reference / this-project row: name + license stacked.
      The card background (M3 connected-group ripple) is set in code by
      LicensesActivity, so its corner radii match the row's position. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -7,41 +7,24 @@
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
-    android:gravity="center_vertical"
     android:minHeight="72dp"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:paddingStart="16dp"
     android:paddingTop="14dp"
     android:paddingEnd="16dp"
     android:paddingBottom="14dp">
 
-    <LinearLayout
-        android:layout_width="0dp"
+    <TextView
+        android:id="@+id/dep_name"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:textColor="@color/md_on_surface"
+        style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
 
-        <TextView
-            android:id="@+id/dep_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/md_on_surface"
-            style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
-
-        <TextView
-            android:id="@+id/dep_license"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/md_on_surface_variant"
-            style="@style/TextAppearance.HyperFCMLive.BodySmall" />
-    </LinearLayout>
-
-    <ImageView
-        android:id="@+id/dep_link"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:layout_marginStart="12dp"
-        android:contentDescription="@null"
-        android:src="@drawable/ic_link"
-        android:tint="@color/md_icon_tint" />
+    <TextView
+        android:id="@+id/dep_license"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/md_on_surface_variant"
+        style="@style/TextAppearance.HyperFCMLive.BodySmall" />
 </LinearLayout>
