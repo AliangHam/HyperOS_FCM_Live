@@ -465,18 +465,18 @@ class LicensesActivity : AppCompatActivity() {
         private val DEPS = arrayOf(
             arrayOf("AndroidX Annotation", "1.10.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX AppCompat", "1.7.0", "Apache License 2.0", ANDROIDX_URL),
-            arrayOf("AndroidX Arch Core", "2.0.0", "Apache License 2.0", ANDROIDX_URL),
-            arrayOf("AndroidX Collection", "1.0.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("AndroidX Arch Core", "2.2.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("AndroidX Collection", "1.5.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Compose Foundation", "1.10.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Compose Material3", "1.4.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Compose UI", "1.10.0", "Apache License 2.0", ANDROIDX_URL),
-            arrayOf("AndroidX Core", "1.1.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("AndroidX Core", "1.16.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf("AndroidX Interpolator", "1.0.0", "Apache License 2.0", ANDROIDX_URL),
             // Build-only stubs vendored under hiddenapi/stubs; kept for attribution.
             arrayOf("AOSP Framework Annotations", "", "Apache License 2.0", AOSP_URL),
             arrayOf(
                 "JetBrains Annotations",
-                "13.0",
+                "23.0.0",
                 "Apache License 2.0",
                 "https://github.com/JetBrains/java-annotations"
             ),
@@ -485,8 +485,8 @@ class LicensesActivity : AppCompatActivity() {
             arrayOf("libxposed API", "102.0.0", "Apache License 2.0", "https://github.com/libxposed/api"),
             arrayOf("libxposed Interface", "102.0.0", "Apache License 2.0", "https://github.com/libxposed"),
             arrayOf("libxposed Service", "102.0.0", "Apache License 2.0", "https://github.com/libxposed/service"),
-            arrayOf("Lifecycle Common", "2.0.0", "Apache License 2.0", ANDROIDX_URL),
-            arrayOf("Lifecycle Runtime", "2.0.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("Lifecycle Common", "2.9.4", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("Lifecycle Runtime", "2.9.4", "Apache License 2.0", ANDROIDX_URL),
             arrayOf(
                 "Material Components",
                 "1.14.0",
@@ -496,7 +496,7 @@ class LicensesActivity : AppCompatActivity() {
             // Vendored source under mcu/ (no Gradle artifact) — listed for attribution.
             arrayOf("Material Color Utilities", "", "Apache License 2.0", MCU_URL),
             arrayOf("SwipeRefreshLayout", "1.2.0", "Apache License 2.0", ANDROIDX_URL),
-            arrayOf("VersionedParcelable", "1.1.0", "Apache License 2.0", ANDROIDX_URL),
+            arrayOf("VersionedParcelable", "1.1.1", "Apache License 2.0", ANDROIDX_URL),
         )
 
         /** name, license label, project URL. */
