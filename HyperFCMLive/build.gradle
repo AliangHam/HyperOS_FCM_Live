@@ -53,8 +53,12 @@ android {
         release {
             if (localProperties.getProperty("storeFile") != null) {
                 signingConfig signingConfigs.config
+            } else if (project.hasProperty("allowDebugSignedRelease")) {
+                // Local/CI opt-in only: sign with the public debug keystore so the
+                // APK can still be installed and inspected. Never ship this build.
+                signingConfig signingConfigs.debug
             }
-            // No debug fallback on purpose: the AOSP debug keystore is public, so a
+            // No silent debug fallback: the AOSP debug keystore is public, so a
             // release signed with it can be impersonated — anyone can sign an APK
             // with the same signature and it installs over this one as an update.
             // Which is refused, loudly, by the guard at the end of this file.
