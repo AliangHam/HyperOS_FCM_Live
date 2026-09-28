@@ -14,8 +14,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.ViewCompat
+import androidx.core.widget.NestedScrollView
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
 import java.io.InputStream
@@ -214,12 +217,14 @@ class LicensesActivity : AppCompatActivity() {
     }
 
     /**
-     * Monospace license body plus the two action pills: outlined 「查看源代码」
-     * on the left and filled 「关闭」 on the right, both equal-width so the
-     * row reads as a balanced pair rather than two text-width chips.
+     * Monospace-free flowing license body plus the two action pills:
+     * outlined 「查看源代码」 on the left and filled 「关闭」 on the right,
+     * both equal-width so the row reads as a balanced pair.
      */
     private fun styleLicenseDialog(dialog: AlertDialog, sourceUrl: String?) {
-        dialog.findViewById<TextView>(android.R.id.message)?.typeface = Typeface.MONOSPACE
+        // Proportional type + unwrapped paragraphs: LICENSE files are hard-wrapped
+        // at ~70 columns, which looks like random mid-sentence breaks on a phone.
+        dialog.findViewById<TextView>(android.R.id.message)?.typeface = Typeface.DEFAULT
         stripScrollEdgeHairlines(dialog)
 
         val palette = ThemeEngine.palette(this)
@@ -286,25 +291,75 @@ class LicensesActivity : AppCompatActivity() {
     }
 
     /**
-     * Hide the 1dp scroll-edge indicators Material draws while a long license
-     * body scrolls. They read as separator rules under the title and above the
-     * action row. Only the views are toggled — theme colour attributes are
-     * left alone, which is what previously broke the palette when the
-     * separators were stripped at the style level.
+     * Kill every chrome line a long message can draw while it scrolls:
+     * framework scroll indicators, scrollbar thumbs, fading edges, title
+     * divider, and any 1–2dp decorative view left in the tree. Theme colour
+     * attributes are left alone — stripping those is what previously broke
+     * the palette.
      */
     private fun stripScrollEdgeHairlines(dialog: AlertDialog) {
+        val root = dialog.window?.decorView ?: return
         for (pkg in arrayOf("com.google.android.material", "androidx.appcompat", "android")) {
-            for (name in arrayOf("scrollIndicatorUp", "scrollIndicatorDown", "titleDivider")) {
+            for (name in arrayOf(
+                "scrollIndicatorUp", "scrollIndicatorDown", "titleDivider",
+                "viewScrollDivider", "scrollDivider"
+            )) {
                 val id = resources.getIdentifier(name, "id", pkg)
                 if (id != 0) {
                     dialog.findViewById<View>(id)?.visibility = View.GONE
                 }
             }
         }
-        dialog.window?.decorView?.let { hideHairlineViews(it) }
+        stripScrollChrome(root)
+        hideHairlineViews(root)
+        // Indicators can be laid out after the first pass; run again when ready.
+        root.viewTreeObserver.addOnGlobalLayoutListener(
+            object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    stripScrollChrome(root)
+                    hideHairlineViews(root)
+                    root.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                }
+            }
+        )
     }
 
-    /** Fallback: any 1dp-tall chrome view inside the dialog is a separator. */
+    /** Scrollables: no thumbs, no fade edges, no framework scroll indicators. */
+    private fun stripScrollChrome(view: View) {
+        try {
+            ViewCompat.setScrollIndicators(view, 0)
+        } catch (_: Throwable) {
+        }
+        when (view) {
+            is ScrollView -> {
+                view.isVerticalScrollBarEnabled = false
+                view.isHorizontalScrollBarEnabled = false
+                view.isVerticalFadingEdgeEnabled = false
+                view.isHorizontalFadingEdgeEnabled = false
+            }
+            is NestedScrollView -> {
+                view.isVerticalScrollBarEnabled = false
+                view.isHorizontalScrollBarEnabled = false
+                view.isVerticalFadingEdgeEnabled = false
+                view.isHorizontalFadingEdgeEnabled = false
+            }
+            is ViewGroup -> {
+                view.isVerticalFadingEdgeEnabled = false
+                view.isHorizontalFadingEdgeEnabled = false
+            }
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                stripScrollChrome(view.getChildAt(i))
+            }
+        }
+    }
+
+    /**
+     * Fallback: any decorative 1–2dp-tall chrome view inside the dialog is a
+     * separator. Checks both declared and measured height so wrap_content
+     * hairlines still match.
+     */
     private fun hideHairlineViews(view: View) {
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
@@ -314,8 +369,14 @@ class LicensesActivity : AppCompatActivity() {
         if (view is TextView || view is android.widget.Button) {
             return
         }
-        val height = view.layoutParams?.height ?: return
-        if (height in 1..dp(2)) {
+        val declared = view.layoutParams?.height ?: 0
+        val measured = view.measuredHeight
+        val minimum = view.minimumHeight
+        val limit = dp(2)
+        val looksThin = (declared in 1..limit) ||
+            (measured in 1..limit) ||
+            (minimum in 1..limit && measured <= limit)
+        if (looksThin) {
             view.visibility = View.GONE
         }
     }
@@ -334,11 +395,29 @@ class LicensesActivity : AppCompatActivity() {
     private fun readRawText(rawRes: Int): String {
         return try {
             resources.openRawResource(rawRes).use { input: InputStream ->
-                input.readBytes().toString(StandardCharsets.UTF_8)
+                unwrapLicenseText(input.readBytes().toString(StandardCharsets.UTF_8))
             }
         } catch (t: Throwable) {
             ""
         }
+    }
+
+    /**
+     * LICENSE files on disk are hard-wrapped at ~70 columns. Shown on a phone
+     * those wraps look like random mid-sentence breaks. Keep blank-line
+     * paragraph structure, join the hard-wrapped lines inside each paragraph,
+     * and drop any BOM so the first glyph is not a zero-width space.
+     */
+    private fun unwrapLicenseText(raw: String): String {
+        val text = raw.trimStart('﻿').replace("\r\n", "\n").replace('\r', '\n')
+        val paragraphs = text.split(Regex("\n[ \t]*\n"))
+        val rebuilt = paragraphs.joinToString("\n\n") { block ->
+            block.lines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .joinToString(" ")
+        }
+        return rebuilt.trim() + "\n"
     }
 
     /**

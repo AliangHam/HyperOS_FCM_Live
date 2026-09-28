@@ -604,8 +604,8 @@
                     android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Privacy entry: same card chrome as the rest of the About group,
-                 plus a trailing chevron because it navigates to PrivacyActivity. -->
+            <!-- Privacy entry: same card chrome as the rest of the About group.
+                 Navigates to PrivacyActivity; no trailing chevron. -->
             <LinearLayout
                 android:id="@+id/row_privacy"
                 android:layout_width="match_parent"
@@ -654,14 +654,6 @@
                         android:textColor="@color/md_on_surface_variant"
                         style="@style/TextAppearance.HyperFCMLive.BodySmall" />
                 </LinearLayout>
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_marginStart="8dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_end"
-                    android:tint="@color/md_icon_tint" />
             </LinearLayout>
 
             <LinearLayout
