@@ -36,6 +36,11 @@ fun AppPalette.toComposeColorScheme(): ColorScheme {
     val s = scheme
     val surface = Color(pageBg)
     val onSurface = Color(this.onSurface)
+    // `background` carries pageBg, whose dark tone is derived from
+    // surfaceContainerLowest — mapping that role verbatim would paint the
+    // cards the same colour as the page. Cards take the `card` alias instead,
+    // which always stays one step above the page in both modes.
+    val cardColor = Color(card)
     return if (dark) {
         darkColorScheme(
             primary = Color(primary),
@@ -73,7 +78,7 @@ fun AppPalette.toComposeColorScheme(): ColorScheme {
             surfaceContainerHigh = Color(this.surfaceContainerHigh),
             surfaceContainerHighest = Color(s.surfaceContainerHighest),
             surfaceContainerLow = Color(this.surfaceContainerLow),
-            surfaceContainerLowest = Color(this.surfaceContainerLowest),
+            surfaceContainerLowest = cardColor,
         )
     } else {
         lightColorScheme(
@@ -112,7 +117,7 @@ fun AppPalette.toComposeColorScheme(): ColorScheme {
             surfaceContainerHigh = Color(this.surfaceContainerHigh),
             surfaceContainerHighest = Color(s.surfaceContainerHighest),
             surfaceContainerLow = Color(this.surfaceContainerLow),
-            surfaceContainerLowest = Color(this.surfaceContainerLowest),
+            surfaceContainerLowest = cardColor,
         )
     }
 }
