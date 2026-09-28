@@ -32,10 +32,10 @@ import android.widget.TextView
 import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import io.github.howard20181.hyperos.fcmlive.theme.AppPalette
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
+import io.github.howard20181.hyperos.fcmlive.ui.WavySwipeRefreshLayout
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 import java.util.Locale
@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     private var btnBatchAdd: ImageButton? = null
     private var btnBatchRemove: ImageButton? = null
     private var btnSelectAll: ImageButton? = null
-    private var swipeRefresh: SwipeRefreshLayout? = null
+    private var swipeRefresh: WavySwipeRefreshLayout? = null
     private var backInvokedCallback: OnBackInvokedCallback? = null
     private var searching = false
     private var multiSelectMode = false
@@ -266,10 +266,18 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
             attachTip(it, R.string.select_all)
         }
 
-        // Material / Android standard pull-to-refresh (SwipeRefreshLayout).
-        swipeRefresh = findViewById<SwipeRefreshLayout?>(R.id.refresh_layout)?.also {
+        // Material / Android standard pull-to-refresh (SwipeRefreshLayout),
+        // with the M3 Expressive LoadingIndicator standing in for the stock
+        // spinner. Both are tinted with the accent so they match the page.
+        swipeRefresh = findViewById<WavySwipeRefreshLayout?>(R.id.refresh_layout)?.also {
             try {
-                it.setColorSchemeColors(ThemeEngine.palette(this).primary)
+                val palette = ThemeEngine.palette(this)
+                // The stock spinner is never drawn, but its colour is kept in
+                // sync so any stock behaviour that reads it stays consistent.
+                it.setColorSchemeColors(palette.primary)
+                // Contained loading indicator: a plate in primaryContainer with
+                // the ring in onPrimaryContainer, per the M3 spec.
+                it.setIndicatorColors(palette.primaryContainer, palette.scheme.onPrimaryContainer)
             } catch (ignored: Throwable) {
             }
             it.setOnRefreshListener { loadApps() }
@@ -985,8 +993,27 @@ class MainActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
     }
 
+    /**
+     * Paint the overflow MD3 checks from the live palette. setImageResource
+     * creates a fresh drawable after inflation, so ThemeFactory never recolors
+     * these — without this the box stays on the static fallback primary.
+     */
     private fun bindMd3Check(box: ImageView?, checked: Boolean) {
-        box?.setImageResource(if (checked) R.drawable.md3_check_on else R.drawable.md3_check_off)
+        if (box == null) {
+            return
+        }
+        val palette = ThemeEngine.palette(this)
+        box.setImageResource(if (checked) R.drawable.md3_check_on else R.drawable.md3_check_off)
+        val drawable = box.drawable?.mutate() ?: return
+        if (drawable is android.graphics.drawable.LayerDrawable) {
+            val fill = drawable.getDrawable(0)
+            if (fill is android.graphics.drawable.GradientDrawable) {
+                fill.setColor(palette.primary)
+            }
+            drawable.getDrawable(1)?.setTint(palette.onPrimary)
+        } else if (drawable is android.graphics.drawable.GradientDrawable) {
+            drawable.setStroke(dp(2), palette.outline)
+        }
     }
 
     override fun onQueryTextSubmit(query: String?): Boolean = false
