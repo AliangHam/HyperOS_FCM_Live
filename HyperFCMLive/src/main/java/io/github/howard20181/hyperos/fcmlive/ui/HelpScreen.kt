@@ -70,6 +70,16 @@ fun HelpScreen() {
                 BodyText(R.string.help_strict_unchanged_body, topPadding = 4.dp)
             }
 
+            SectionTitle(R.string.help_section_power)
+            HelpCard {
+                TitleText(R.string.help_power_gms_title)
+                BodyText(R.string.help_power_gms_body, topPadding = 4.dp)
+                TitleText(R.string.help_power_actions_title, topPadding = 16.dp)
+                BodyText(R.string.help_power_actions_body, topPadding = 4.dp)
+                TitleText(R.string.help_power_scope_title, topPadding = 16.dp)
+                BodyText(R.string.help_power_scope_body, topPadding = 4.dp)
+            }
+
             SectionTitle(R.string.help_section_faq)
             HelpCard {
                 TitleText(R.string.help_faq_q1)

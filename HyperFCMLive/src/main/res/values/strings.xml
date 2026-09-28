@@ -115,30 +115,38 @@
     <string name="fcm_diagnostics">FCM 诊断</string>
     <string name="fcm_diagnostics_not_found">当前设备无法打开 FCM 诊断界面。</string>
 
-    <!-- 帮助页。文案必须与 Hooker.java 的实际行为一致：
-         空名单放行全部、非空名单只放行名单内、命中时临时豁免 2000ms 并补
-         FLAG_INCLUDE_STOPPED_PACKAGES；改名单立即生效，启用/更新模块后需重启。 -->
+    <!-- 帮助页。文案必须与 Hooker 的实际行为一致：
+         shouldWake：空名单或名单内 → 自启动判定、FLAG_INCLUDE_STOPPED_PACKAGES、2000ms 豁免；
+         shouldApply：严格模式关→全部；严格模式开且名单非空→仅名单内+GMS；
+         GMS 保护（不冻结/不断网/不延后 FCM 链）始终开启。改名单立即生效，启用/更新模块后需重启。 -->
     <string name="help_section_how">应用介绍</string>
-    <string name="help_how_body">澎湃的省电策略会限制后台应用的广播与网络。谷歌推送（FCM）靠 GMS 发一条广播把应用叫醒，这条广播一旦被延后或拦下，应用就收不到推送\n\n本模块在系统框架里改掉这套判定：放行谷歌推送与重连相关的广播，不让 GMS 断网、被冻结或被拉黑；收到推送时还会为勾选的应用申请约 2 秒的临时省电豁免，并让它即使在「已停止」状态下也能收到这条广播</string>
+    <string name="help_how_body">澎湃的省电策略会限制后台应用的广播与网络。谷歌推送（FCM）靠 GMS 发一条广播把应用叫醒，这条广播一旦被延后或拦下，应用就收不到推送\n\n本模块在系统框架里改掉这套判定：放行谷歌推送与重连相关的广播，不让 GMS 断网、被冻结或被拉黑；收到推送时还会按白名单为应用申请约 2 秒的临时省电豁免，并让它即使在「已停止」状态下也能收到这条广播。一个都不勾选时对所有能收谷歌推送的应用生效</string>
     <string name="help_section_allowlist">白名单机制介绍</string>
     <string name="help_allowlist_empty_title">一个都不勾选</string>
-    <string name="help_allowlist_empty_body">相当于全部放行：任何收到谷歌推送的应用都会被允许自启动并被叫醒，不需要逐个维护名单。代价是后台耗电和内存占用会比只勾选若干应用上升更明显</string>
+    <string name="help_allowlist_empty_body">相当于全部放行：任何收到谷歌推送的应用都会获得自启动唤起、「已停止」唤醒和约 2 秒省电豁免，不需要逐个维护名单。代价是后台耗电和内存占用会比只勾选若干应用上升更明显</string>
     <string name="help_allowlist_checked_title">勾选了若干应用</string>
-    <string name="help_allowlist_checked_body">勾选的应用会拿到额外权限：允许被推送自启动、从「已停止」状态被唤醒，并在每次推送时获得一小段省电豁免\n没勾选的应用同样不再被拦截——它们的推送广播不会被延后或丢弃，GMS 也保持可达——只是拿不到这几项额外权限，所以推送可能到得晚一些，或要应用打开时才送达</string>
+    <string name="help_allowlist_checked_body">勾选的应用会拿到额外权限：允许被推送唤起（含自启动判定）、从「已停止」状态被唤醒，并在每次推送时获得约 2 秒的省电豁免\n未勾选的应用拿不到这几项，推送可能到得晚一些，或要应用打开时才送达。GMS 与推送重连始终受保护；若再打开「严格模式」，未勾选的应用还会改回系统默认判定</string>
     <string name="help_section_strict">严格模式</string>
     <string name="help_strict_on_title">开启后的变化</string>
     <string name="help_strict_on_body">只要勾选了至少一个应用，模块就<b>只对勾选的应用生效</b>。未勾选的应用会还原系统默认判定行为，与未装模块时的表现一致。无论如何，Google Play 服务本身始终受到保护</string>
     <string name="help_strict_unchanged_title">不受影响的部分</string>
     <string name="help_strict_unchanged_body">一个都不勾选时行为不变：既然没有勾选任何应用，也就不存在「未勾选的应用」，仍然全部放行</string>
+    <string name="help_section_power">省电与冻结</string>
+    <string name="help_power_gms_title">为什么单独处理 GMS</string>
+    <string name="help_power_gms_body">PowerKeeper / MIUI auto 会把没有桌面图标的 Google Play 服务留在「智能限制」场景，并可能快速冻结、限制网络或延后广播。GMS 一旦被冻住，FCM 长连接断开，所有推送都会到不了</string>
+    <string name="help_power_actions_title">模块做了什么</string>
+    <string name="help_power_actions_body">不改动 GMS 本身，只调整系统侧判定：把 GMS 写入不限制名单，并把它的省电场景从「智能限制」改成「无限制」；快速冻结与冻结策略直接跳过 GMS；关闭针对 GMS 的限制开关和网络限制；放行推送重连与投递广播。若发现 GMS 已被冻住，还会发送心跳/重连请求让它重新连上</string>
+    <string name="help_power_scope_title">和白名单的关系</string>
+    <string name="help_power_scope_body">上述 GMS 保护始终开启，不依赖勾选，也不受严格模式影响。白名单与严格模式只决定目标应用能否获得自启动唤起、「已停止」唤醒和约 2 秒省电豁免这些额外权限</string>
     <string name="help_section_faq">常见问题</string>
     <string name="help_faq_q1">勾选了应用还是不推送？</string>
     <string name="help_faq_a1">依次检查：① LSPosed 里模块已启用、作用域包含「系统框架」；② 模块首次启用或更新后重启过一次设备；③ 该应用确实支持 FCM；④ 用「FCM 诊断」看 GMS 的连接状态</string>
     <string name="help_faq_q2">耗电变多了？</string>
     <string name="help_faq_a2">这是模块的固有代价——它放行推送重连并允许应用被唤醒。只勾选真正需要即时推送的应用，可以减少应用从「已停止」状态被唤醒的次数，耗电主要就花在这里。但这并不是把模块对其它应用关掉：GMS 与推送广播始终受保护</string>
     <string name="help_faq_q3">「展示支持应用」是怎么判断的？</string>
-    <string name="help_faq_a3">只要在该应用的清单里发现下面任意一项，就标记为支持：\nFirebaseMessagingService\nFirebaseInstanceIdReceiver\ncom.google.firebase.MESSAGING_EVENT\ncom.google.android.c2dm.intent.RECEIVE</string>
+    <string name="help_faq_a3">只要在该应用的清单里发现下面任意一项，就标记为支持：\ncom.google.firebase.messaging.FirebaseMessagingService\ncom.google.firebase.iid.FirebaseInstanceIdReceiver\ncom.google.firebase.MESSAGING_EVENT\ncom.google.android.c2dm.intent.RECEIVE</string>
     <string name="help_faq_q4">如何界定 MiPush 应用？</string>
-    <string name="help_faq_a4">应用的清单里声明了 com.xiaomi.push.service.XMPushService</string>
+    <string name="help_faq_a4">应用的清单里声明了 com.xiaomi.push.service.XMPushService（含被禁用的组件）</string>
 
     <!-- 模块状态页 -->
     <string name="status_yes">是</string>
