@@ -489,7 +489,7 @@ class LicensesActivity : AppCompatActivity() {
             arrayOf("Lifecycle Runtime", "2.0.0", "Apache License 2.0", ANDROIDX_URL),
             arrayOf(
                 "Material Components",
-                "1.12.0",
+                "1.14.0",
                 "Apache License 2.0",
                 "https://github.com/material-components/material-components-android"
             ),
