@@ -18,6 +18,8 @@ import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
  */
 class HelpActivity : AppCompatActivity() {
 
+    private val tips = TooltipHost(this)
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))
     }
@@ -30,6 +32,7 @@ class HelpActivity : AppCompatActivity() {
 
         val back = findViewById<View>(R.id.btn_back)
         back?.setOnClickListener { finish() }
+        tips.attach(back, R.string.back)
 
         val composeView = findViewById<androidx.compose.ui.platform.ComposeView>(R.id.help_content)
         composeView?.let {
@@ -63,5 +66,10 @@ class HelpActivity : AppCompatActivity() {
             this, findViewById(R.id.top_bar),
             null, 0
         )
+    }
+
+    override fun onDestroy() {
+        tips.dismiss()
+        super.onDestroy()
     }
 }

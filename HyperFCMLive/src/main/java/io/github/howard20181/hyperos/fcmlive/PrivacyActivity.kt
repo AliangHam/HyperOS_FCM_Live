@@ -14,6 +14,8 @@ import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
  */
 class PrivacyActivity : AppCompatActivity() {
 
+    private val tips = TooltipHost(this)
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))
     }
@@ -26,6 +28,7 @@ class PrivacyActivity : AppCompatActivity() {
 
         val back = findViewById<View>(R.id.btn_back)
         back?.setOnClickListener { finish() }
+        tips.attach(back, R.string.back)
 
         val composeView =
             findViewById<androidx.compose.ui.platform.ComposeView>(R.id.privacy_content)
@@ -56,5 +59,10 @@ class PrivacyActivity : AppCompatActivity() {
             this, findViewById(R.id.top_bar),
             findViewById(R.id.privacy_content), 16
         )
+    }
+
+    override fun onDestroy() {
+        tips.dismiss()
+        super.onDestroy()
     }
 }

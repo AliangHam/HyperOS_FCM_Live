@@ -30,6 +30,8 @@ import java.nio.charset.StandardCharsets
  */
 class LicensesActivity : AppCompatActivity() {
 
+    private val tips = TooltipHost(this)
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(ThemeSupport.attach(newBase))
     }
@@ -42,6 +44,7 @@ class LicensesActivity : AppCompatActivity() {
 
         val back = findViewById<View>(R.id.btn_back)
         back?.setOnClickListener { finish() }
+        tips.attach(back, R.string.back)
 
         val list = findViewById<LinearLayout>(R.id.licenses_list) ?: return
         // Was applied on every inset dispatch; once is enough — the bottom padding
@@ -444,6 +447,11 @@ class LicensesActivity : AppCompatActivity() {
     }
 
     private fun dp(value: Int): Int = UiUtils.dp(this, value)
+
+    override fun onDestroy() {
+        tips.dismiss()
+        super.onDestroy()
+    }
 
     companion object {
         private const val REPO_URL = "https://github.com/iamqwert/HyperOS_FCM_Live"
