@@ -8,8 +8,9 @@ import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
 
 /**
  * Privacy & permissions page, opened from the About card between
- * 「检查更新」 and 「查看源代码」. Body is Compose (PrivacyScreen); the top
- * bar stays a View so insets and the back button match Help/About.
+ * 「检查更新」 and 「查看源代码」. Body is Compose (PrivacyScreen) inside a
+ * Stretch-overscroll ScrollView; the top bar stays a View so insets and the
+ * back button match About / Help.
  */
 class PrivacyActivity : AppCompatActivity() {
 
@@ -46,13 +47,14 @@ class PrivacyActivity : AppCompatActivity() {
     }
 
     /**
-     * Same safe-area handling as Help: status bar pads the top bar only;
-     * PrivacyScreen adds navigation-bar padding as scroll content.
+     * Same safe-area handling as About: status bar pads the top bar, and the
+     * bottom inset pads the scrollable content so the last card clears the
+     * gesture bar while the page background still reaches the bottom edge.
      */
     private fun applySystemBarInsets() {
         UiUtils.applyBarInsets(
             this, findViewById(R.id.top_bar),
-            null, 0
+            findViewById(R.id.privacy_content), 16
         )
     }
 }

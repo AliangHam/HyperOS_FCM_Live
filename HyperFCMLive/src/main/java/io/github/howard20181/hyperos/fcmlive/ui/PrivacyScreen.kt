@@ -4,16 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,42 +21,31 @@ import androidx.compose.ui.unit.sp
 import io.github.howard20181.hyperos.fcmlive.R
 
 /**
- * Privacy & permissions page. Opened from the About card that sits between
- * 「检查更新」 and 「查看源代码」. Body is the same content that used to live
- * as a static section on the About screen.
+ * Privacy & permissions page body. Scrolling and Stretch overscroll live on the
+ * host ScrollView (activity_privacy.xml), matching About / Licenses / Main —
+ * this composable only paints the cards.
  */
 @Composable
 fun PrivacyScreen() {
-    // Same edge-to-edge treatment as HelpScreen: the scroll viewport fills the
-    // window; only the scrolled body carries the navigation-bar inset.
-    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
+            .padding(start = 16.dp, end = 16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 16.dp + navBottom
-            )
-        ) {
-            SectionTitle(R.string.privacy_section_perms)
-            PrivacyCard {
-                BodyTitle(R.string.privacy_perm_query_all)
-                BodyText(R.string.privacy_perm_query_all_desc, topPadding = 4.dp)
-                BodyTitle(R.string.privacy_perm_get_installed, topPadding = 16.dp)
-                BodyText(R.string.privacy_perm_get_installed_desc, topPadding = 4.dp)
-                BodyTitle(R.string.privacy_perm_internet, topPadding = 16.dp)
-                BodyText(R.string.privacy_perm_internet_desc, topPadding = 4.dp)
-            }
+        SectionTitle(R.string.privacy_section_perms)
+        PrivacyCard {
+            BodyTitle(R.string.privacy_perm_query_all)
+            BodyText(R.string.privacy_perm_query_all_desc, topPadding = 4.dp)
+            BodyTitle(R.string.privacy_perm_get_installed, topPadding = 16.dp)
+            BodyText(R.string.privacy_perm_get_installed_desc, topPadding = 4.dp)
+            BodyTitle(R.string.privacy_perm_internet, topPadding = 16.dp)
+            BodyText(R.string.privacy_perm_internet_desc, topPadding = 4.dp)
+        }
 
-            SectionTitle(R.string.privacy_section_commitment)
-            PrivacyCard {
-                BodyText(R.string.privacy_commitment_desc)
-            }
+        SectionTitle(R.string.privacy_section_commitment)
+        PrivacyCard {
+            BodyText(R.string.privacy_commitment_desc)
         }
     }
 }

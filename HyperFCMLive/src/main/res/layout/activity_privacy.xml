@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Privacy page. Same skeleton as Help/About (top bar + body). The body is
-     Compose (PrivacyScreen) hosted in a ComposeView; the top bar stays a View
-     so window insets and the back button are unchanged. -->
+<!-- Privacy page. Same skeleton as About/Help (top bar + body). The body is
+     Compose (PrivacyScreen) hosted in a ComposeView inside a ScrollView so
+     Stretch overscroll (API 31+) bends the content, matching the About page. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -54,10 +54,21 @@
         </FrameLayout>
     </LinearLayout>
 
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/privacy_content"
+    <!-- Stretch overscroll (API 31+) bends the content itself; same pattern
+         as About / Licenses / Main. -->
+    <ScrollView
+        android:id="@+id/privacy_scroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@android:color/transparent" />
+        android:background="@color/md_page_bg"
+        android:clipToPadding="false"
+        android:overScrollMode="always">
+
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/privacy_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent" />
+    </ScrollView>
 </LinearLayout>
