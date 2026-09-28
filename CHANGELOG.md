@@ -1,5 +1,36 @@
 # Changelog
 
+## 3.0.0 **重磅更新**
+
+🚀 推送修复
+
+- 把 GMS 写入 MILLET_NO_RESTRICT_APP 名单，自动回写 userTable.bgControl 为 noRestrict
+- 使 Greezer 冻结路径直接跳过 GMS，收到推送广播时主动解冻目标应用，理论上解决了「日志显示已投递、应用却毫无反应」的问题
+- 使 c2dm 投递不再被延后，广播也不会被塞进缓存等到下次解锁才回放
+- 将 GMS 加入睡眠模式白名单
+- 睡眠模式结束后主动让 GMS 重连，不等待下一次心跳
+- 扩展恢复流程，覆盖更多失败场景以解决广播投递失败
+
+⚠️理论上做到了对 GMS 广播推送全方位的保护，现阶段可能就只剩高内存负载时清理内存导致 GMS 短时间内掉线，但会立即恢复
+
+✨ 界面优化
+
+- 下拉刷新改用 Material 3 Expressive 加载指示器
+- 修复更多选项勾选框配色不跟随动态取色的问题
+- 新增隐私说明页
+- 更新开源许可页内容
+- 优化开源许可页，查看开源项目及组件的展示
+- 新增 Shortcut ，桌面长按图标可直达设置、FCM 诊断与帮助
+- 支持 Android 12+ 回弹效果
+
+🙏 致谢
+
+本次推送修复重点参考了以下三个项目，在此致谢：
+
+- [dingwen07/hyperos-fcm-fix](https://github.com/dingwen07/hyperos-fcm-fix)
+- [Kr328/HyperOSFCMFix](https://github.com/Kr328/HyperOSFCMFix)
+- [ReedGAOOO/FCMGuard-HyperOS](https://github.com/ReedGAOOO/FCMGuard-HyperOS)
+
 ## 2.6.0
 
 - 全新桌面图标，支持 Adaptive Icon 与 Themed Icon
