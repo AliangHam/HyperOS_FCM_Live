@@ -135,7 +135,7 @@
     <string name="help_power_gms_title">为什么单独处理 GMS</string>
     <string name="help_power_gms_body">PowerKeeper / MIUI auto 会把没有桌面图标的 Google Play 服务留在「智能限制」场景，并可能快速冻结、限制网络或延后广播。GMS 一旦被冻住，FCM 长连接断开，所有推送都会到不了</string>
     <string name="help_power_actions_title">模块做了什么</string>
-    <string name="help_power_actions_body">不改动 GMS 本身，只调整系统侧判定：把 GMS 写入不限制名单，并把它的省电场景从「智能限制」改成「无限制」；快速冻结与冻结策略直接跳过 GMS；关闭针对 GMS 的限制开关和网络限制；放行推送重连与投递广播。若发现 GMS 已被冻住，还会发送心跳/重连请求让它重新连上</string>
+    <string name="help_power_actions_body">不改动 GMS 本身，只调整系统侧判定：把 GMS 写入不限制名单，并把它的省电场景从「智能限制」改成「无限制」，同时把配置表里的后台控制回写为「无限制」；快速冻结与冻结策略直接跳过 GMS；关闭针对 GMS 的限制开关和网络限制；放行推送重连与投递广播。若发现 GMS 已被冻住，还会发送心跳/重连请求让它重新连上</string>
     <string name="help_power_scope_title">和白名单的关系</string>
     <string name="help_power_scope_body">上述 GMS 保护始终开启，不依赖勾选，也不受严格模式影响。白名单与严格模式只决定目标应用能否获得自启动唤起、「已停止」唤醒和约 2 秒省电豁免这些额外权限</string>
     <string name="help_section_faq">常见问题</string>

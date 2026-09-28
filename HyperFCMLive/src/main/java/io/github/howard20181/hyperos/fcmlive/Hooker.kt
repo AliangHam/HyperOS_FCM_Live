@@ -862,6 +862,11 @@ class Hooker : XposedModule() {
                 } catch (t: Throwable) {
                     log(Log.ERROR, TAG, "Failed to extend getNoRestrictApps", t)
                 }
+                try {
+                    ensureGmsUserTableBgControl()
+                } catch (t: Throwable) {
+                    log(Log.WARN, TAG, "Failed to write back userTable.bgControl", t)
+                }
                 result
             }
             deoptimize(getNoRestrictAppsMethod)
@@ -869,6 +874,35 @@ class Hooker : XposedModule() {
             logSkip("UserConfigureHelper#getNoRestrictApps absent, skip")
         } catch (e: ClassNotFoundException) {
             logSkip("UserConfigureHelper class absent, skip")
+        }
+
+        // Any user-config writer can put GMS back to miuiAuto; re-assert after.
+        try {
+            val writerClass =
+                classLoader.loadClass("com.miui.powerkeeper.provider.UserConfigureHelper")
+            for (method in writerClass.declaredMethods) {
+                val name = method.name
+                val looksWriter =
+                    name.contains("update", ignoreCase = true) ||
+                        name.contains("save", ignoreCase = true) ||
+                        name.contains("insert", ignoreCase = true) ||
+                        name.contains("modify", ignoreCase = true) ||
+                        name.contains("setBg", ignoreCase = true)
+                if (!looksWriter || name.contains("get", ignoreCase = true)) continue
+                hookE(method).intercept { chain: XposedInterface.Chain ->
+                    val result = chain.proceed()
+                    try {
+                        ensureGmsUserTableBgControl()
+                    } catch (t: Throwable) {
+                        log(Log.WARN, TAG, "userTable re-assert after ${method.name} failed", t)
+                    }
+                    result
+                }
+                deoptimize(method)
+                log(Log.INFO, TAG, "UserConfigureHelper#${method.name} hooked for userTable re-assert")
+            }
+        } catch (e: ClassNotFoundException) {
+            // Already reported above when getNoRestrictApps was missing.
         }
 
         // Belt-and-suspenders: after dealNoRestrictApp() writes the projection,
@@ -897,10 +931,13 @@ class Hooker : XposedModule() {
 
     /**
      * Read Settings.System.MILLET_NO_RESTRICT_APP and append GMS when missing.
-     * Preserves every existing entry and ordering. After a repair, triggers
-     * P4 recovery so an already-frozen GMS gets a chance to reconnect.
+     * Preserves every existing entry and ordering. Also writes GMS's
+     * userTable.bgControl back to "noRestrict" so the source row matches.
+     * After a repair, triggers P4 recovery so an already-frozen GMS gets a
+     * chance to reconnect.
      */
     private fun ensureGmsInMilletSetting() {
+        ensureGmsUserTableBgControl()
         val context = getSystemContext() ?: getPowerKeeperContext() ?: return
         val resolver = context.contentResolver
         val raw = android.provider.Settings.System.getString(resolver, MILLET_NO_RESTRICT_APP_KEY)
@@ -916,6 +953,67 @@ class Hooker : XposedModule() {
         log(Log.INFO, TAG, "MILLET_NO_RESTRICT_APP: appended GMS (was: $raw)")
         // P4: if GMS was frozen during the missing-entry window, nudge it awake.
         recoverGmsConnection(context)
+    }
+
+    /**
+     * Write-back: set GMS's PowerKeeper userTable.bgControl to "noRestrict".
+     *
+     * P1 already injects GMS into the no-restrict projection and P3 rewrites
+     * the compiled scenario; this keeps the *source* row aligned so
+     * dealNoRestrictApp() and any regeneration that literally filters
+     * bgControl="noRestrict" include GMS without leaning on the interceptors.
+     * Only the GMS row is touched; other packages keep whatever the user set.
+     */
+    private fun ensureGmsUserTableBgControl() {
+        if (userTableReassertInFlight) return
+        userTableReassertInFlight = true
+        try {
+            val context = getPowerKeeperContext() ?: getSystemContext() ?: return
+            val uri = android.net.Uri.parse(USER_TABLE_URI)
+            var current: String? = null
+            context.contentResolver.query(
+                uri,
+                arrayOf(COL_BG_CONTROL),
+                "$COL_PKG_NAME = ?",
+                arrayOf(GMS_PACKAGE_NAME),
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    current = cursor.getString(0)
+                }
+            }
+            if (current == BG_CONTROL_NO_RESTRICT) return
+
+            val values = android.content.ContentValues()
+            values.put(COL_BG_CONTROL, BG_CONTROL_NO_RESTRICT)
+            val updated = context.contentResolver.update(
+                uri,
+                values,
+                "$COL_PKG_NAME = ?",
+                arrayOf(GMS_PACKAGE_NAME)
+            )
+            if (updated > 0) {
+                log(
+                    Log.INFO, TAG,
+                    "userTable: GMS bgControl $current -> $BG_CONTROL_NO_RESTRICT"
+                )
+                return
+            }
+            // Row missing: insert a minimal one so the literal filter still matches.
+            values.put(COL_PKG_NAME, GMS_PACKAGE_NAME)
+            values.put(COL_USER_ID, 0)
+            values.put(COL_LAST_CONFIGURED, System.currentTimeMillis())
+            try {
+                context.contentResolver.insert(uri, values)
+                log(Log.INFO, TAG, "userTable: inserted GMS row bgControl=$BG_CONTROL_NO_RESTRICT")
+            } catch (t: Throwable) {
+                log(Log.WARN, TAG, "userTable: insert GMS row failed", t)
+            }
+        } catch (t: Throwable) {
+            log(Log.WARN, TAG, "userTable: failed to set GMS bgControl=$BG_CONTROL_NO_RESTRICT", t)
+        } finally {
+            userTableReassertInFlight = false
+        }
     }
 
     /**
@@ -1531,6 +1629,10 @@ class Hooker : XposedModule() {
     @Volatile
     private var restrictNetMatchLogged = false
 
+    /** Guards userTable write-back against re-entry via hooked config writers. */
+    @Volatile
+    private var userTableReassertInFlight = false
+
     private fun hookInternationalPolicyManager(classLoader: ClassLoader) {
         val InternationalPolicyManagerClass =
             classLoader.loadClass("com.miui.server.greeze.InternationalPolicyManager")
@@ -1678,6 +1780,14 @@ class Hooker : XposedModule() {
         private const val GMS_PACKAGE_NAME = "com.google.android.gms"
         private const val GMS_PERSISTENT_PROCESS_NAME = "com.google.android.gms.persistent"
         private const val MILLET_NO_RESTRICT_APP_KEY = "MILLET_NO_RESTRICT_APP"
+
+        /** PowerKeeper user config table: source row for bgControl. */
+        private const val USER_TABLE_URI = "content://com.miui.powerkeeper.configure/userTable"
+        private const val COL_PKG_NAME = "pkgName"
+        private const val COL_USER_ID = "userId"
+        private const val COL_LAST_CONFIGURED = "lastConfigured"
+        private const val COL_BG_CONTROL = "bgControl"
+        private const val BG_CONTROL_NO_RESTRICT = "noRestrict"
 
         /** P3 scenario constants (from live PowerKeeper dumps). */
         private const val SCENARIO_MUI_AUTO_GMS = 0   // isGmsCoreApp + miuiAuto
