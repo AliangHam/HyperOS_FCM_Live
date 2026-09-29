@@ -107,7 +107,7 @@ dependencies {
     // Compile-time only: annotations used by the source; nothing is packaged.
     compileOnly 'androidx.annotation:annotation:1.10.0'
     // Material Design 3 components, theme, typography and shape tokens.
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.8.0'
     // 1.13.0+ is required for LoadingIndicator (M3 Expressive), which drives
     // the pull-to-refresh spinner.
     implementation 'com.google.android.material:material:1.14.0'
