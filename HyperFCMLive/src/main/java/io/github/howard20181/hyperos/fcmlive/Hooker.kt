@@ -1015,14 +1015,28 @@ class Hooker : XposedModule() {
      * — the method prints "setUidState, uid = %d allow = %b" itself. Its body
      * stores the value into mUidState and then drives DeviceIdlePolicyHelper,
      * so this single call is the convergence point for standby restriction.
+     * The downstream helper method is obfuscated and its name differs per
+     * ROM generation — OS3 calls s:(IZ)V, OS4 calls r:(IZ)V (both classes also
+     * carry the other letter with a different signature). It has exactly one
+     * call site in either generation, so no second in-process path can
+     * restrict GMS behind setUidState's back. Do not hard-code the letter:
+     * only setUidState itself is hooked, and its (IZ)V signature is stable.
      *
-     * Only the argument is rewritten. Do not pre-seed mUidState: when the
-     * incoming value equals the cached one the method returns before touching
-     * DeviceIdlePolicyHelper, so writing the cache by hand would suppress the
-     * recovery path instead of triggering it. Forcing allow=true lets the
-     * method converge on its own: any restriction attempt sees allow(true)
-     * differ from the cached false, then writes true and lifts the
-     * restriction.
+     * Only the argument is rewritten. Do not pre-seed mUidState to true: when
+     * the incoming value equals the cached one the method returns early, so a
+     * true cache would suppress the recovery path instead of triggering it.
+     * Forcing allow=true lets the method converge: a restriction attempt sees
+     * allow(true) differ from the cached false, then writes true and lifts the
+     * restriction. If the divergence ever needs fixing, the safe direction is
+     * to force the cache to false, never true — false guarantees the branch
+     * actually executes.
+     *
+     * Known residual gap: if GMS gets restricted out-of-band (never through
+     * setUidState) while mUidState still reads true, even an allow=true call
+     * short-circuits and nothing lifts the block. P4 recovery does not cover
+     * it — it is an outbound "please reconnect" nudge to GMS/GSF, not a lift of
+     * a uid restriction, and it only fires on sleep-mode exit or a
+     * MILLET_NO_RESTRICT_APP repair, neither of which recurs on its own.
      */
     private fun hookAppStandbyUidState(classLoader: ClassLoader) {
         try {
@@ -1048,6 +1062,7 @@ class Hooker : XposedModule() {
                     chain.proceed(args)
                 }
                 deoptimize(setUidStateMethod)
+                log(Log.INFO, TAG, "AppStandbyController#setUidState hooked for GMS allow re-assert")
             } catch (e: NoSuchMethodException) {
                 logSkip("AppStandbyController#setUidState absent, skip")
             }
