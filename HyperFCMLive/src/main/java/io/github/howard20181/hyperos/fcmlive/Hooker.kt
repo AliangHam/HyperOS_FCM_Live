@@ -372,6 +372,18 @@ class Hooker : XposedModule() {
             if (action != null &&
                 (CN_DEFER_BROADCAST.contains(action) || ACTION_REMOTE_INTENT == action)
             ) {
+                // Success-path log for c2dm only: the four CN actions fire constantly
+                // (reconnect / heartbeat) and would flood the log. This is the only way to
+                // tell "c2dm really flows through here" apart from "never invoked at all" —
+                // required before any decision about gating this branch by package name,
+                // which the (String) signature does not expose anyway.
+                if (ACTION_REMOTE_INTENT == action && !c2dmDeferBypassLogged) {
+                    c2dmDeferBypassLogged = true
+                    log(
+                        Log.INFO, TAG,
+                        "deferBroadcast: c2dm delivery reached this hook; defer suppressed"
+                    )
+                }
                 return@intercept false
             }
             chain.proceed()
@@ -1722,9 +1734,22 @@ class Hooker : XposedModule() {
         return HashSet(sAllowlist)
     }
 
+    /**
+     * Wake-time privileges: auto-start allowance, stopped-package delivery and the
+     * 2000ms temporary power exemption.
+     *
+     * GMS is exempt here for the same reason it is exempt in [shouldApply]: the whole
+     * point of the module is that the GMS/FCM chain never gets narrowed, no matter how
+     * the allowlist is configured. Without this branch a non-empty allowlist would make
+     * every [shouldWake] call site answer false when the callee happens to be GMS itself
+     * (the only call site without a caller check is `isNeedCachedBroadcast`).
+     */
     private fun shouldWake(targetPackage: String?): Boolean {
         val allowlist = getFcmAllowlist()
-        return allowlist.isEmpty() || allowlist.contains(targetPackage)
+        return allowlist.isEmpty() ||
+            allowlist.contains(targetPackage) ||
+            GMS_PACKAGE_NAME == targetPackage ||
+            GMS_PERSISTENT_PROCESS_NAME == targetPackage
     }
 
     private fun shouldApply(packageName: String?): Boolean {
@@ -1975,6 +2000,10 @@ class Hooker : XposedModule() {
 
     @Volatile
     private var restrictNetMatchLogged = false
+
+    /** One-shot: confirms c2dm actually reaches `DomesticPolicyManager#deferBroadcast`. */
+    @Volatile
+    private var c2dmDeferBypassLogged = false
 
     /** Guards userTable write-back against re-entry via hooked config writers. */
     @Volatile
