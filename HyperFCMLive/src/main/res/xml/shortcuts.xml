@@ -21,10 +21,11 @@
         android:icon="@drawable/ic_shortcut_help"
         android:shortcutShortLabel="@string/help"
         android:shortcutLongLabel="@string/shortcut_help_long">
+        <!-- Online help: opened in the browser. No targetPackage so the
+             launcher resolves ACTION_VIEW to a browser. -->
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="io.github.howard20181.hyperos.fcmlive"
-            android:targetClass="io.github.howard20181.hyperos.fcmlive.HelpActivity" />
+            android:data="https://github.com/iamqwert/HyperOS_FCM_Live/blob/main/HELP.md" />
     </shortcut>
 
     <shortcut

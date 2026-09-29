@@ -117,9 +117,11 @@ class AboutActivity : AppCompatActivity() {
             attachTip(back, R.string.back)
         }
 
+        // The help page lives online now: one copy in the repo, no in-app
+        // copy to keep in sync with Hooker. See HELP_URL.
         val help = findViewById<View>(R.id.btn_help)
         if (help != null) {
-            help.setOnClickListener { startActivity(Intent(this, HelpActivity::class.java)) }
+            help.setOnClickListener { openUrl(HELP_URL) }
             attachTip(help, R.string.help)
         }
 
@@ -1128,6 +1130,17 @@ class AboutActivity : AppCompatActivity() {
 
     companion object {
         private const val REPO_URL = "https://github.com/iamqwert/HyperOS_FCM_Live"
+
+        /**
+         * Online help, opened in the browser from the top-bar help icon and
+         * from the "help" launcher shortcut (see [ShortcutPublisher]).
+         *
+         * The in-app help page was removed on purpose: its text had to be kept
+         * in sync with `Hooker` by hand, which drifted more than once. Keeping
+         * a single copy in the repository means a wording fix ships without an
+         * APK release. Point this at a URL that renders Markdown.
+         */
+        const val HELP_URL = "https://github.com/iamqwert/HyperOS_FCM_Live/blob/main/HELP.md"
 
         /** Easter egg: 7 taps on the version row within 2s, then silent for 10s. */
 

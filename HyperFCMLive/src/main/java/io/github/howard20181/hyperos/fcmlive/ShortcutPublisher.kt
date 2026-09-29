@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 
 /**
@@ -37,12 +38,9 @@ object ShortcutPublisher {
                 .setShortLabel(context.getString(R.string.help))
                 .setLongLabel(context.getString(R.string.shortcut_help_long))
                 .setIcon(Icon.createWithResource(context, R.drawable.ic_shortcut_help))
-                .setIntent(
-                    Intent(Intent.ACTION_VIEW).setClassName(
-                        context.packageName,
-                        "io.github.howard20181.hyperos.fcmlive.HelpActivity"
-                    )
-                )
+                // Opens the online help in a browser; there is no in-app help
+                // page any more (the text lives in HELP.md in the repository).
+                .setIntent(Intent(Intent.ACTION_VIEW, Uri.parse(AboutActivity.HELP_URL)))
                 .build()
             val fcm = ShortcutInfo.Builder(context, ID_FCM)
                 .setShortLabel(context.getString(R.string.fcm_diagnostics))

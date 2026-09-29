@@ -57,9 +57,6 @@
             android:name=".AboutActivity"
             android:exported="false" />
         <activity
-            android:name=".HelpActivity"
-            android:exported="false" />
-        <activity
             android:name=".PrivacyActivity"
             android:exported="false" />
         <activity
