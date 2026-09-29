@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.2.0
+
+🚀 推送修复
+
+- 修复 `setGmsChainState` 极性错误：原先传 `true` 会启用 `gms_wall` 防火墙链、把 GMS 拦掉，现改为强制 `false` 关闭该链路
+- 新增 `AppStandbyController#setUidState` 钩子：PowerKeeper 收紧 GMS 待机限制时强制改写为允许，保证 GMS 不被限速/限网
+- `shouldWake` 在非空白名单下仍对 GMS 本身豁免，避免「勾了应用后 GMS 自己反而拿不到唤醒特权」
+- `deferBroadcast` 对 c2dm 增加一次性成功日志，便于确认推送投递确实走到该钩子
+
+✨ 体验与文档
+
+- 帮助页迁出应用，改为浏览器打开在线文档 [HELP.md](HELP.md)：文案只保留一份在仓库里，改完即生效，不必发版
+- 桌面「帮助」快捷方式同步改为打开在线帮助
+- README 全面改写：补充工作原理、安装步骤、功能表、已知边界与隐私说明
+
 ## 3.0.2
 
 - 更新依赖版本号

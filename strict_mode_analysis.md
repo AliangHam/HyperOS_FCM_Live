@@ -1,6 +1,6 @@
 # 严格模式与现有保护目标的一致性分析报告
 
-对象：`HyperFCMLive` v3.0.2.32，`Hooker.kt`（含本次新增的 `AppStandbyController#setUidState` 钩子）
+对象：`HyperFCMLive` v3.2.0.33，`Hooker.kt`（含本次新增的 `AppStandbyController#setUidState` 钩子）
 问题：开启应用内「严格模式」后，是否与模块现有目标冲突 / 不适配 / 不完全适配
 方法：静态审计（逐 hook 点核对其守门条件）+ 与 help 文案所定义的契约作对比
 
@@ -12,7 +12,7 @@
 |---|---|
 | **是否存在目标冲突** | **否。** 严格模式不存在与模块目标相反的方向：所有守卫都只做"收窄"，没有任何一处因开启严格模式而导致 GMS 失去保护，或让已勾选应用被降级 |
 | **是否存在不适配** | **是，1 处（P1）**：`DomesticPolicyManager#deferBroadcast` 对 `ACTION_REMOTE_INTENT` 无条件跳过延迟，既不看白名单也不看严格模式，与帮助页"未勾选的应用推送可能到得晚一些"的契约相反；该处的代码注释还自称"与严格模式的最小干预哲学一致"，判断与实际相反 |
-| **是否存在不完全适配** | **是，3 处**：守卫函数之间的 GMS 豁免不对称（P2-1）、严格模式实际作用域远小于开关给人的印象（P2-2）、白名单异步加载导致开局 fail-open（P3） |
+| **是否存在不完全适配** | **是，3 处**：守卫函数之间的 GMS 豁免不对称（P2-1）、严格模式实际作用域远小于开关给人的印象（P2-2）、白名单首读失败时会有一段开局 fail-open 窗口（P3） |
 | **是否为设计取舍而非缺陷** | GMS 专属钩子全部无条件生效（含若干具有全局副作用的写入）属于**契约内行为**，但"全局副作用"这一层未在文案中披露（P4） |
 | **本机实测额外发现** | **P5（新增）**：`isPushApp` 钩子在本机是**死钩子** —— ROM 取证显示本机 greeze 实际选用的策略实现是 `DomesticPolicyManager`，它**根本没有 `isPushApp` 方法**。因此严格模式名义上的 3 处收权，在本机**实际只生效 2 处** |
 
@@ -57,7 +57,7 @@ private fun shouldApply(packageName: String?): Boolean {
 
 1. **`shouldWake` 完全不读 `sStrictMode`** —— 与 C2「白名单单独即收窄投递」**一致**，不是缺陷
 2. **`shouldWake` 没有 GMS 豁免，`shouldApply` 有** —— 与 C4 存在潜在冲突（见 P2-1）
-3. 两者都是 **fail-open**（白名单为空放行全部）—— 与 C3 一致，但叠加异步加载后会在开局放大（见 P3）
+3. 两者都是 **fail-open**（白名单为空放行全部）—— 与 C3 一致，但叠加"装载期首读失败"后会在开局放大（见 P3）
 
 ## 3. 覆盖矩阵
 
@@ -130,15 +130,22 @@ shouldWake  : allowlist.isEmpty() || allowlist.contains(targetPackage)      // �
 
 ```
 sAllowlist 初值 emptySet()                       // Hooker.kt:1628
-loadAllowlistFromRemotePrefs()                   // 1633，跑在 HandlerThread("fcmlive-allowlist") 上
+hookAllowlist() → loadAllowlistFromRemotePrefs() // 1646，**同步**调用一次（不是异步）
 getFcmAllowlist(): 若接收器未注册且距上次读取 >= ALLOWLIST_STALE_MS(10 s) → 异步重载后立即返回旧值
-loadAllowlistFromRemotePrefs(): sAllowlistReadMs 刷新；异常仅 log ERROR，不清空
+loadAllowlistFromRemotePrefs(): sAllowlistReadMs 刷新（**异常路径也会刷新**）；异常仅 log ERROR，不清空
 ```
 
-- 因为两个守卫都是 fail-open，**开局读到空集等同于非严格模式**：LSPosed 装配/热重载后的头几次推送（以及 Reload 节流 `ALLOWLIST_RELOAD_MIN_MS=500ms` 窗口内的调用）会按"全放行"处理
-- 读取成功一次之后就正常；失败分支保留上次旧值，不会退空 —— 这点是对的
-- 与之前实测的"冷启动到接收器执行约 0.5 s"叠加，意味着开机后最早的一次推送有可能被放行给未勾选应用
-- 影响是**短暂且偏松**，不是丢推送；建议：在装载时同步预读一次（阻塞到拿到值为止），或在 `loadAllowlistFromRemotePrefs` 成功后打一条 INFO 日志，便于在日志里区分"严格模式真的生效"和"还没读到名单"
+**更正（本轮自纠）**：此前把首次加载写成"异步"，**不准确**。`hookAllowlist()`(1645-1648) 在装载时
+**同步**调一次 `loadAllowlistFromRemotePrefs()`，之后再异步装接收器。所以：
+
+- 开局 fail-open 窗口**只在同步读取抛异常时**才出现（远程 prefs 尚未就绪），不是常态路径
+- 异常时 `sAllowlistReadMs` 仍被刷新(1642) ⇒ 下一次 `getFcmAllowlist()` 要等满 10 s 才触发重试，**失败反而把重试推后**
+- 另有一条更常见、且与读取无关的成因：`getStringSet(KEY_ALLOWLIST, emptySet())`(1636) 默认值非空，
+  所以 1637 的 `else HashSet()` 是**死分支**；"键从未写入"时会正常读到空集 → 同样全放行（这就是 C3 的空名单语义，不是 bug）
+
+- 影响仍是**短暂且偏松**，不是丢推送；但"装载时同步预读"这条建议**已经存在**，真正该做的是：
+  在 `loadAllowlistFromRemotePrefs` 成功/失败各打一条 INFO/ERROR 日志（现在失败才打，成功不打），
+  才能在日志里区分"严格模式已生效"与"还没读到名单"；以及异常后不等 10 s 就退避重试
 
 ### P4（设计取舍，非缺陷，但文案未披露）——GMS 侧护盘的全局副作用
 
@@ -201,14 +208,18 @@ loadAllowlistFromRemotePrefs(): sAllowlistReadMs 刷新；异常仅 log ERROR，
 5. **`deferBroadcastForMiui` 对 CN 队列无守门** —— CN 队列是 GMS 内部重连/心跳动作，属 C4 的"推送重连始终受保护"
 6. **UI 列表默认不过滤**（`showFcmSupportedOnly`/`excludeMiPushApps` 初值均为 false）—— 用户能把任意应用加进白名单，不存在"想选却选不到"的覆盖面缺口
 
-## 6. 建议动作（按优先级，本次未改任何实现代码）
+## 6. 建议动作
+
+> **2026-09-29 实施状态更新**：优先级 1（补日志）、3（`shouldWake` GMS 分支）、6（帮助页文案）**已实施**
+> （`Hooker.kt` + `values/strings.xml`，编译 `EXIT=0`，已 `adb install -r`，热重载日志确认装载成功）。
+> 优先级 5（给 `deferBroadcast` 加守门）**仍未做**，且已确认在当前钩点不可实现 —— 见 §9/F1。
 
 | 优先级 | 动作 | 需要动代码？ |
 |---|---|---|
 | 1 | 真机确认 P1 是否真的被 c2dm 命中：`adb logcat -s LSPosedLogDaemon \| grep -i defer`（当前该 hook 成功路径无日志，建议先补一条） | 是（仅日志） |
 | 2 | 评估为 `DomesticPolicyManager#isRestrictNet` 补钩子（P5-3）：本机走的就是 Domestic 分支，这一侧目前**完全没有覆盖** | 是（新钩子） |
 | 3 | 给 `shouldWake` 补 GMS 分支，与 `shouldApply` 对齐（P2-1） | 是（一行） |
-| 4 | 装载时同步预读一次白名单，消除开局 fail-open 窗口（P3） | 是 |
+| 4 | 首读成功/失败各打一条日志（现在只有失败才打），异常后退避重试（P3；"装载时同步预读"代码里**已有**，无需再加） | 是 |
 | 5 | P1 确认命中后，把 `deferBroadcast` 加到 `shouldWake` 之下 | 是 |
 | 6 | 帮助页文案：说清"白名单单独即收窄投递、严格模式管的是其余判定"（P2-2）；披露 GMS 保护的全局落地形态（P4）；`help_power_actions_body` 中"推送网络限制豁免"在 CN ROM 上不成立，需加限定或进 FAQ（P5） | 文案（中英同步） |
 
