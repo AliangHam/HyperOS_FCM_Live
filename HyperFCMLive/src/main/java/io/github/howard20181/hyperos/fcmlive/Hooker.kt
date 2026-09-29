@@ -179,6 +179,11 @@ class Hooker : XposedModule() {
                 log(Log.ERROR, TAG, "Failed to hook GmsObserver", t)
             }
             try {
+                hookAppStandbyUidState(classLoader)
+            } catch (t: Throwable) {
+                log(Log.ERROR, TAG, "Failed to hook AppStandbyController", t)
+            }
+            try {
                 hookGlobalFeatureConfigureHelper(classLoader)
             } catch (t: Throwable) {
                 log(Log.ERROR, TAG, "Failed to hook GlobalFeatureConfigureHelper", t)
@@ -999,6 +1004,55 @@ class Hooker : XposedModule() {
         }
         if (!disconnectHooked) {
             logSkip("GmsObserver\$*#googleNetworkDisconnect absent, skip disconnect rewrite")
+        }
+    }
+
+    /**
+     * Keep GMS out of PowerKeeper's per-uid network restriction set.
+     *
+     * AppStandbyController.setUidState(int uid, boolean allow) is where the
+     * per-uid decision is made. The second parameter really is named "allow"
+     * — the method prints "setUidState, uid = %d allow = %b" itself. Its body
+     * stores the value into mUidState and then drives DeviceIdlePolicyHelper,
+     * so this single call is the convergence point for standby restriction.
+     *
+     * Only the argument is rewritten. Do not pre-seed mUidState: when the
+     * incoming value equals the cached one the method returns before touching
+     * DeviceIdlePolicyHelper, so writing the cache by hand would suppress the
+     * recovery path instead of triggering it. Forcing allow=true lets the
+     * method converge on its own: any restriction attempt sees allow(true)
+     * differ from the cached false, then writes true and lifts the
+     * restriction.
+     */
+    private fun hookAppStandbyUidState(classLoader: ClassLoader) {
+        try {
+            val appStandbyControllerClass =
+                classLoader.loadClass("com.miui.powerkeeper.controller.AppStandbyController")
+            try {
+                val setUidStateMethod = appStandbyControllerClass.getDeclaredMethod(
+                    "setUidState",
+                    Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType
+                )
+                hookE(setUidStateMethod).intercept { chain: XposedInterface.Chain ->
+                    val args = chain.args.toTypedArray()
+                    if (args.size > 1 && args[0] is Int) {
+                        val uid = args[0] as Int
+                        if (isGmsUid(uid) && java.lang.Boolean.TRUE != args[1]) {
+                            args[1] = true
+                            log(
+                                Log.INFO, TAG,
+                                "AppStandbyController#setUidState: kept GMS (uid $uid) allowed"
+                            )
+                        }
+                    }
+                    chain.proceed(args)
+                }
+                deoptimize(setUidStateMethod)
+            } catch (e: NoSuchMethodException) {
+                logSkip("AppStandbyController#setUidState absent, skip")
+            }
+        } catch (e: ClassNotFoundException) {
+            logSkip("AppStandbyController class absent, skip")
         }
     }
 
