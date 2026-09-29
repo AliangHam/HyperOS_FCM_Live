@@ -866,8 +866,11 @@ class Hooker : XposedModule() {
                 )
                 hookE(setGmsChainStateMethod).intercept { chain: XposedInterface.Chain ->
                     val args = chain.args.toTypedArray()
+                    // NetdExecutor.setGmsChainState(chain, enable): enable==true 下发
+                    // "set_chain_state <chain> enable"，配合 initGmsChain(gms_wall, uid, "REJECT")
+                    // 即 true=开墙阻断 GMS；与 setGmsDnsBlockerState(true→"deny") 一致。
                     if (args.size > 1) {
-                        args[1] = true
+                        args[1] = false
                     }
                     chain.proceed(args)
                 }
