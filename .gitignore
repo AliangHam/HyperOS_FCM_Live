@@ -32,6 +32,7 @@ local.properties
 *analysis-report*
 *internal-log*
 *sensitive-report*
+*anatomy*
 *.internal.md
 *.private.md
 *.secret.*
