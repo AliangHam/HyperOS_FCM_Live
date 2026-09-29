@@ -1031,6 +1031,25 @@ class Hooker : XposedModule() {
      * to force the cache to false, never true — false guarantees the branch
      * actually executes.
      *
+     * Not a fix by itself: calling setUidState(gmsUid, true) from outside does
+     * not bypass the early return — the early return lives inside that same
+     * method, and a cache of true makes the call a no-op, which is exactly the
+     * divergent case it would be meant to repair. It also cannot converge the
+     * cache with reality: mUidState only consults external state on the first
+     * seeding (getUidState), afterwards it is write-only. The only working
+     * form is the pair — force the cache to false, then invoke setUidState
+     * (uid, true) so the body runs end to end. Because that body also fires
+     * sendConnectivityActionToApp(uid), doing it on a timer means waking GMS
+     * repeatedly; if it is ever added, drive it from events (module load,
+     * screen-on, the pre-flight we already run before delivering a broadcast)
+     * with a long minimum interval, never from a periodic tick.
+     *
+     * That divergence stays unimplemented on purpose: every observable signal
+     * on the test device says it is not happening (dumpsys netpolicy shows
+     * UID 10133 as policy=4 ALLOW_METERED_BACKGROUND with background
+     * restriction off, and GMS is present in all three DeviceIdle whitelist
+     * sections), so adding reflexive cache writes would be speculative risk.
+     *
      * Known residual gap: if GMS gets restricted out-of-band (never through
      * setUidState) while mUidState still reads true, even an allow=true call
      * short-circuits and nothing lifts the block. P4 recovery does not cover
