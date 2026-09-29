@@ -586,6 +586,7 @@
                         style="@style/TextAppearance.HyperFCMLive.BodyLarge" />
 
                     <TextView
+                        android:id="@+id/about_check_update_state"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:clickable="false"

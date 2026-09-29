@@ -33,6 +33,7 @@ local.properties
 *internal-log*
 *sensitive-report*
 *anatomy*
+residual_hook_targets*
 *.internal.md
 *.private.md
 *.secret.*

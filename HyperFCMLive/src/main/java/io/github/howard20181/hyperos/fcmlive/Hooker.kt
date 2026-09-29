@@ -153,9 +153,297 @@ class Hooker : XposedModule() {
             log(Log.ERROR, TAG, "Failed to hook InternationalPolicyManager", t)
         }
         try {
+            hookUdpPackageRestrict(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook udpPackageRestrict", t)
+        }
+        try {
             hookProcessCleanerBase(classLoader)
         } catch (t: Throwable) {
             log(Log.ERROR, TAG, "Failed to hook ProcessCleanerBase", t)
+        }
+        try {
+            hookAlarmGate(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to hook alarm gate", t)
+        }
+        try {
+            probeWakePath(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to install wake-path probe", t)
+        }
+        try {
+            probeGmsInMessageApp(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to probe mMessageApp", t)
+        }
+        try {
+            probeSleepModeUidRule(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to probe sleep-mode uid rule", t)
+        }
+        try {
+            probePacketFilterSupport(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to probe packet filter support", t)
+        }
+        try {
+            probeSocketTeardown(classLoader)
+        } catch (t: Throwable) {
+            log(Log.ERROR, TAG, "Failed to install socket-teardown probe", t)
+        }
+    }
+
+    /**
+     * Read-only probe for gate A3 (action list 2.2).
+     *
+     * `MiuiNetworkPolicyManagerService#updateSleepModeWhitelistUidRules` reaches
+     * the real work only through `Class.forName("android.net.ConnectivityManager")
+     * .getDeclaredMethod("updateSleepModeUidRule", int, boolean)`. The symbol is
+     * therefore absent from every services.jar dex, and its existence cannot be
+     * settled statically — asking the live framework is the only way to tell a
+     * working path from a no-op reflection stub.
+     */
+    private fun probeSleepModeUidRule(classLoader: ClassLoader) {
+        val name = "updateSleepModeUidRule"
+        try {
+            val cm = classLoader.loadClass("android.net.ConnectivityManager")
+            val method = cm.getDeclaredMethod(
+                name, java.lang.Integer.TYPE, java.lang.Boolean.TYPE
+            )
+            log(Log.INFO, TAG, "sleep-mode probe: ConnectivityManager#$name present: $method")
+        } catch (e: NoSuchMethodException) {
+            log(Log.INFO, TAG, "sleep-mode probe: ConnectivityManager#$name ABSENT (gate A3 negative)")
+        } catch (e: ClassNotFoundException) {
+            logSkip("ConnectivityManager absent, sleep-mode probe skip")
+        }
+        probeReflectiveMethod(
+            classLoader,
+            "android.net.ConnectivityManager",
+            "enableSleepModeChain",
+            "sleep-mode chain probe",
+            java.lang.Boolean.TYPE
+        )
+    }
+
+    /**
+     * Reports whether a hidden framework method exists, which is the only way to
+     * tell MIUI's reflective trampolines from real work: the target symbol lives in
+     * framework.jar, so it is absent from every services.jar dex and cannot be
+     * found statically.
+     */
+    private fun probeReflectiveMethod(
+        classLoader: ClassLoader,
+        className: String,
+        methodName: String,
+        label: String,
+        vararg parameterTypes: Class<*>
+    ) {
+        try {
+            val clazz = classLoader.loadClass(className)
+            val method = clazz.getDeclaredMethod(methodName, *parameterTypes)
+            log(Log.INFO, TAG, "$label: ${clazz.simpleName}#$methodName present: $method")
+        } catch (e: NoSuchMethodException) {
+            log(Log.INFO, TAG, "$label: ${className.substringAfterLast('.')}#$methodName ABSENT")
+        } catch (e: ClassNotFoundException) {
+            logSkip("$className absent, $label skip")
+        }
+    }
+
+    /**
+     * Read-only probe for the UDP packet-filter capability (action list 3.6).
+     *
+     * `GreezeManagerService#updateAurogonUidRule` ends in `udpPackageRestrict` on
+     * **both** the CN and the non-CN branch, and that tail calls
+     * `PowerInsightService#setUidNetworkFilter(uid)`. Whether any of it does
+     * anything depends on `FilterEnablePolicy.isSupportPacketFilter()`, which is
+     * assembled at runtime from a custom feature flag, a platform check and a
+     * cloud switch.
+     */
+    private fun probePacketFilterSupport(classLoader: ClassLoader) {
+        try {
+            val policy =
+                classLoader.loadClass("com.miui.powerinsight.packetfilter.FilterEnablePolicy")
+            val supported =
+                policy.getDeclaredMethod("isSupportPacketFilter").invoke(null) as? Boolean
+            log(Log.INFO, TAG, "packet filter probe: isSupportPacketFilter=$supported")
+        } catch (e: ClassNotFoundException) {
+            logSkip("FilterEnablePolicy absent, packet filter probe skip")
+        } catch (e: NoSuchMethodException) {
+            logSkip("FilterEnablePolicy#isSupportPacketFilter absent, probe skip")
+        }
+    }
+
+    /**
+     * Read-only probe for the 3.2 socket-teardown chain.
+     *
+     * Dex-level forensics found no caller for any of the three entry points, but the
+     * client half was never on the ROM jars that were grepped: `WhetstoneActivityManager`
+     * lives in `/system_ext/framework/miui-framework.jar` (**not** `/system/framework`),
+     * and its `doDesSocketForUid` forwards over the `IWhetstoneActivityManager` AIDL
+     * (`TRANSACTION_doDesSocketForUid` exists in the generated Stub). A binder transport
+     * is invisible to `invoke-*` counting, so two questions stay open statically:
+     *
+     * 1. is the **server** class (`WhetstoneActivityManagerService`) even resolvable in
+     *    system_server and does it implement `doDesSocketForUid`? Its definition is in
+     *    none of the six dexes dumped from services.jar / miui-services.jar, yet
+     *    miui-services.jar does `new-instance` it.
+     * 2. does anything ever reach the real implementation
+     *    `MiuiNetworkManagementService#doDesSocketForUid(String, int[], boolean)`?
+     *
+     * Both are answered at runtime here; nothing is modified, and only the first few
+     * calls are logged (plus every call that touches a GMS uid).
+     *
+     * Three layers are watched, because the transport hops twice:
+     *
+     * `WhetstoneActivityManager` (static, client) ──AIDL "whetstone.activity"──▶
+     *     `WhetstoneActivityManagerService` (server) ──▶ `MiuiNetworkManagementService` (impl)
+     *
+     * A single-layer probe could miss the call entirely if the server reaches netd on
+     * its own, so all three are instrumented read-only.
+     *
+     * Why this stays an observation slot rather than being retired: a static
+     * "zero callers" verdict would be a **false negative** here. The service
+     * half is published — `adb shell service list` includes `whetstone.activity`
+     * — so arbitrary processes can reach it over binder, and the client half is
+     * not in the services.jar / miui-services.jar corpus that a dex grep covers.
+     * Entry points therefore cannot be counted statically at all, which is
+     * exactly why they are counted here, at runtime.
+     *
+     * Current reading on this device: structurally reachable, zero calls in the
+     * ~6 minute observation window ⇒ "structurally reachable, never triggered",
+     * **not** dead code. Only sustained zero-traffic over a much longer window
+     * justifies downgrading — never a `invoke-*` count.
+     */
+    private fun probeSocketTeardown(classLoader: ClassLoader) {
+        reportWhetstoneClasses(classLoader)
+        hookSocketTeardown(
+            classLoader,
+            "com.miui.whetstone.WhetstoneActivityManager",
+            "doDesSocketForUid",
+            "client"
+        )
+        hookSocketTeardown(
+            classLoader,
+            "com.miui.whetstone.server.WhetstoneActivityManagerService",
+            "doDesSocketForUid",
+            "server"
+        )
+        hookSocketTeardown(
+            classLoader,
+            "com.android.server.net.MiuiNetworkManagementService",
+            "doDesSocketForUid",
+            "impl"
+        )
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun hookSocketTeardown(
+        classLoader: ClassLoader,
+        className: String,
+        methodName: String,
+        label: String
+    ) {
+        val clazz = try {
+            classLoader.loadClass(className)
+        } catch (e: ClassNotFoundException) {
+            logSkip("$className absent, socket-teardown probe ($label) skip")
+            return
+        }
+        val method = clazz.declaredMethods.firstOrNull { m ->
+            m.name == methodName &&
+                m.parameterTypes.contentEquals(
+                    arrayOf(
+                        String::class.java,
+                        IntArray::class.java,
+                        Boolean::class.javaPrimitiveType
+                    )
+                )
+        }
+        if (method == null) {
+            logSkip("$className#$methodName/3 absent, socket-teardown probe ($label) skip")
+            return
+        }
+        method.isAccessible = true
+        hookE(method).intercept { chain: XposedInterface.Chain ->
+            val result = chain.proceed()
+            try {
+                val n = ++socketTeardownCount
+                val pkg = chain.getArg(0) as? String
+                val uids = chain.getArg(1) as? IntArray
+                val all = chain.getArg(2) as? Boolean
+                val gmsHit = uids?.any { isGmsUid(it) } ?: false
+                if (gmsHit || n <= 10) {
+                    log(
+                        Log.INFO, TAG,
+                        "socket-teardown probe[$label]: $methodName #$n " +
+                            "(pkg=$pkg uids=${uids?.contentToString()} all=$all gmsHit=$gmsHit)"
+                    )
+                }
+            } catch (t: Throwable) {
+                log(Log.ERROR, TAG, "Failed to inspect socket-teardown args ($label)", t)
+            }
+            result
+        }
+        deoptimize(method)
+        log(Log.INFO, TAG, "socket-teardown probe[$label]: $methodName hooked (read-only)")
+    }
+
+    /** Reports whether each half of the Whetstone pair resolves in system_server. */
+    private fun reportWhetstoneClasses(classLoader: ClassLoader) {
+        for (name in arrayOf(
+            "com.miui.whetstone.WhetstoneActivityManager",
+            "com.miui.whetstone.server.WhetstoneActivityManagerService"
+        )) {
+            val clazz = try {
+                classLoader.loadClass(name)
+            } catch (t: Throwable) {
+                log(Log.INFO, TAG, "whetstone probe: $name NOT resolvable here")
+                continue
+            }
+            val declares = clazz.declaredMethods.any { it.name == "doDesSocketForUid" }
+            log(
+                Log.INFO, TAG,
+                "whetstone probe: $name resolvable, declares doDesSocketForUid=$declares"
+            )
+        }
+    }
+
+    /**
+     * Read-only probe for Gate-R (action list 2.1).
+     *
+     * `AurogonImmobulusMode.mMessageApp` is the ROM-supplied instant-messaging
+     * package list, and it is the *only* input to
+     * `isNeedRestictNetworkPolicy(uid)` — which in turn is the whole body of
+     * `DomesticPolicyManager#isRestrictNet`.
+     *
+     * The list is an **exemption** list, not a restriction list:
+     * `isRestrictNet == !mMessageApp.contains(pkg)` (see the polarity note in the
+     * action list). So:
+     *
+     * - GMS **absent** ⇒ `isRestrictNet(gmsUid)` is **true**, i.e. the ROM is
+     *   willing to strip GMS networking on freeze ⇒ the hook has a real effect.
+     * - GMS **present** ⇒ it already returns false and the hook would be a no-op.
+     *
+     * The field is `PUBLIC STATIC` and written in `<clinit>`, so a plain
+     * reflective read returns the final list (and triggers class init if the
+     * class has not been touched yet). Nothing is modified here.
+     */
+    private fun probeGmsInMessageApp(classLoader: ClassLoader) {
+        try {
+            val clazz = classLoader.loadClass("com.miui.server.greeze.AurogonImmobulusMode")
+            val field = clazz.getDeclaredField("mMessageApp")
+            field.isAccessible = true
+            val list = field.get(null) as? Collection<*>
+            val present = list?.contains(GMS_PACKAGE_NAME) ?: false
+            log(
+                Log.INFO, TAG,
+                "mMessageApp probe: size=${list?.size ?: -1}, containsGms=$present"
+            )
+        } catch (e: NoSuchFieldException) {
+            logSkip("AurogonImmobulusMode#mMessageApp absent, probe skip")
+        } catch (e: ClassNotFoundException) {
+            logSkip("AurogonImmobulusMode absent, mMessageApp probe skip")
         }
     }
 
@@ -203,7 +491,11 @@ class Hooker : XposedModule() {
     }
 
     override fun onHotReloading(param: XposedModuleInterface.HotReloadingParam): Boolean {
-        log(Log.WARN, TAG, "Hot reload requested — a full reboot is recommended for reliability")
+        // Hot reload is fully supported on LSPosed API 102: onHotReloaded unhooks every
+        // stale handle and re-runs the whole install sequence, so nothing is left behind
+        // that would need a reboot. Do not reintroduce any "reboot required" wording —
+        // HELP.md / README state no reboot is needed and this method proves it.
+        log(Log.INFO, TAG, "Hot reload requested — re-installing hooks without reboot")
         param.setSavedInstanceState(this.param)
         return true
     }
@@ -389,6 +681,120 @@ class Hooker : XposedModule() {
             chain.proceed()
         }
         deoptimize(deferBroadcastMethod)
+        hookDomesticRestrictNet(DomesticPolicyManagerClass)
+    }
+
+    /**
+     * P0 #1 (action list 2.1): `DomesticPolicyManager#isRestrictNet(I)Z` → false for GMS.
+     *
+     * Polarity matters and was wrong in every earlier round, so it is recorded
+     * here from the bytecode instead of from the method names:
+     *
+     *   isNeedRestictNetworkPolicy(uid) == mMessageApp.contains(pkg)   // @16cc44
+     *   isRestrictNet(uid)               == !isNeedRestictNetworkPolicy(uid)   // @172c90
+     *
+     * `mMessageApp` is therefore the **exempt** list (544 entries on this ROM,
+     * probed at runtime: GMS absent), and the only caller of `isRestrictNet` is
+     * inside `GreezeManagerService.freezeUids(...)`:
+     *
+     *   if (isRestrictNet(uid)) { flags |= 0x0C00; closeSocketForAurogon(uid);
+     *                             updateAurogonUidRule(uid, true); }
+     *
+     * So true really means "restrict this uid's network", and GMS — being absent
+     * from the exempt list — would get its sockets torn if it were ever frozen.
+     *
+     * Currently inert: greezer history shows GMS never enters the freeze path on
+     * this device (E7-3 closed, negative). Shipped as defence: if a future ROM or
+     * state freezes GMS, this keeps the network restriction off. Only the GMS uid
+     * is forced — every other uid proceeds unchanged, so the instant-messaging
+     * apps that *are* on the exempt list keep their existing policy.
+     */
+    private fun hookDomesticRestrictNet(domesticPolicyManagerClass: Class<*>) {
+        try {
+            val isRestrictNetMethod = domesticPolicyManagerClass.getDeclaredMethod(
+                "isRestrictNet", Int::class.javaPrimitiveType
+            )
+            hookE(isRestrictNetMethod).intercept { chain: XposedInterface.Chain ->
+                val uid = chain.getArg(0)
+                if (uid is Int && isGmsUid(uid)) {
+                    // Dedicated one-shot: `restrictNetMatchLogged` belongs to the
+                    // isPushApp stack-walk branch and must not be consumed here.
+                    if (!gmsRestrictNetLogged) {
+                        gmsRestrictNetLogged = true
+                        log(
+                            Log.INFO, TAG,
+                            "DomesticPolicyManager#isRestrictNet: kept GMS (uid $uid) unrestricted"
+                        )
+                    }
+                    return@intercept false
+                }
+                chain.proceed()
+            }
+            deoptimize(isRestrictNetMethod)
+            log(Log.INFO, TAG, "DomesticPolicyManager#isRestrictNet hooked for GMS")
+        } catch (e: NoSuchMethodException) {
+            logSkip("DomesticPolicyManager#isRestrictNet absent, skip")
+        }
+    }
+
+    /**
+     * Action list 3.6: keep GMS off the ROM's UDP packet filter.
+     *
+     * Eight rounds judged `updateAurogonUidRule` dead because the Domestic
+     * implementation is an empty method — but that only covers the policy
+     * dispatch. Both branches of the *host* method end in the same private tail:
+     *
+     *   GreezeManagerService.updateAurogonUidRule(uid, allow)          @18bf08
+     *     ├─ CN:      PolicyManager.updateAurogonUidRule(...)   // Domestic = empty
+     *     └─ non-CN:  reflect ConnectivityManager#updateAurogonUidRule
+     *     ⇒ both fall through to udpPackageRestrict(uid, allow) @18ba14
+     *          allow=true  → PowerInsightService.setUidNetworkFilter(uid)
+     *          allow=false → PowerInsightService.clearUidNetworkFilter(uid)
+     *
+     * The freeze callers pass `true`, the thaw / binderDied / appDied callers pass
+     * `false`, so this mirrors 3.1: filtering is applied on freeze and withdrawn on
+     * thaw. Unlike 3.1 the tail is **not** an empty method on this device (CN model,
+     * `mPowerMilletEnable` true, `FilterEnablePolicy.isSupportPacketFilter()` true),
+     * so it is the more defensible of the two defence hooks.
+     *
+     * Only the `allow=true` direction is skipped. Skipping `allow=false` too would
+     * strand an already-installed filter and leave GMS permanently filtered.
+     *
+     * Still inert today: E7-3 shows GMS never enters the freeze path, so this never
+     * fires in normal use. Shipped as defence, and no benefit is claimed.
+     */
+    private fun hookUdpPackageRestrict(classLoader: ClassLoader) {
+        try {
+            val greezeManagerServiceClass =
+                classLoader.loadClass("com.miui.server.greeze.GreezeManagerService")
+            val udpPackageRestrictMethod = greezeManagerServiceClass.getDeclaredMethod(
+                "udpPackageRestrict",
+                Int::class.javaPrimitiveType,
+                Boolean::class.javaPrimitiveType
+            )
+            udpPackageRestrictMethod.isAccessible = true
+            hookE(udpPackageRestrictMethod).intercept { chain: XposedInterface.Chain ->
+                val uid = chain.getArg(0)
+                val allow = chain.getArg(1) == true
+                if (uid is Int && allow && isGmsUid(uid)) {
+                    if (!gmsUdpFilterLogged) {
+                        gmsUdpFilterLogged = true
+                        log(
+                            Log.INFO, TAG,
+                            "udpPackageRestrict: skipped UDP filter for GMS (uid $uid)"
+                        )
+                    }
+                    return@intercept null
+                }
+                chain.proceed()
+            }
+            deoptimize(udpPackageRestrictMethod)
+            log(Log.INFO, TAG, "GreezeManagerService#udpPackageRestrict hooked for GMS")
+        } catch (e: ClassNotFoundException) {
+            logSkip("GreezeManagerService absent, udpPackageRestrict skip")
+        } catch (e: NoSuchMethodException) {
+            logSkip("GreezeManagerService#udpPackageRestrict absent, skip")
+        }
     }
 
     private fun hookListAppsManager(classLoader: ClassLoader) {
@@ -1981,6 +2387,215 @@ class Hooker : XposedModule() {
         deoptimize(broadcastMethod)
     }
 
+    /**
+     * §5 alarm delivery gate — action list item 3.3 (P1, no hard gate).
+     *
+     * `checkAlarmIsAllowedSend(Context, Alarm)` decides whether an alarm that has
+     * already come due is actually delivered; false drops it. It is a live path
+     * on this ROM: the single call site is
+     * `AlarmManagerService.triggerAlarmsLocked(ArrayList, long)` in services.jar,
+     * i.e. the alarm delivery main path. The Impl shows zero in-class callers
+     * only because it overrides `AlarmManagerServiceStub` — overridden methods
+     * have to be counted at the base type (forensics rule 11), which is exactly
+     * why this one was nearly mis-filed as dead code alongside `isPushApp`.
+     *
+     * Body (OS4 miui-services dexdump, 40 code units):
+     *   if (alarm != null && alarm.operation != null)
+     *       return WhetstoneClientManager.isAlarmAllowedLocked(
+     *           Binder.getCallingPid(), alarm.operation.getCreatorUid(),
+     *           alarm.statsTag, CheckIfAlarmGenralRistrictApply(uid, pid));
+     *   return true;
+     *
+     * Scope is narrow on purpose: re-allow only when the ROM already denied
+     * (false) AND the alarm belongs to GMS. Everything else proceeds unchanged,
+     * so the allow path gains no new behaviour and no other app is affected.
+     * GMS and GSF share a uid, so one uid check covers both.
+     */
+    private fun hookAlarmGate(classLoader: ClassLoader) {
+        val alarmClass = try {
+            classLoader.loadClass("com.android.server.alarm.Alarm")
+        } catch (e: ClassNotFoundException) {
+            logSkip("com.android.server.alarm.Alarm absent, alarm gate skip")
+            return
+        }
+        val creatorUidField: Field = try {
+            alarmClass.getDeclaredField("creatorUid")
+        } catch (e: NoSuchFieldException) {
+            logSkip("Alarm#creatorUid absent, alarm gate skip")
+            return
+        }
+        creatorUidField.isAccessible = true
+        // Alarm.creatorUid is the PendingIntent creator uid — seeded from
+        // operation.getCreatorUid(), i.e. the exact value the ROM feeds into
+        // isAlarmAllowedLocked. Reading the field mirrors the ROM's own judgment
+        // without invoking a hidden PendingIntent method.
+
+        // First hit wins: the Impl overrides the Stub, so virtual dispatch only
+        // ever enters the Impl. Hooking the base as well would add a hook that
+        // can never be entered — it only inflates the install summary.
+        var methods: List<Method> = emptyList()
+        for (name in ALARM_GATE_CLASS_NAMES) {
+            val clazz = try {
+                classLoader.loadClass(name)
+            } catch (ignored: ClassNotFoundException) {
+                continue
+            }
+            val found = clazz.declaredMethods.filter { m ->
+                m.name == "checkAlarmIsAllowedSend" &&
+                    m.parameterCount == 2 &&
+                    m.returnType == Boolean::class.javaPrimitiveType
+            }
+            if (found.isNotEmpty()) {
+                methods = found
+                break
+            }
+        }
+        if (methods.isEmpty()) {
+            logSkipOtherGeneration("checkAlarmIsAllowedSend absent, alarm gate skip")
+            return
+        }
+        for (method in methods) {
+            val field = creatorUidField
+            method.isAccessible = true
+            hookE(method).intercept { chain: XposedInterface.Chain ->
+                val result = chain.proceed()
+                try {
+                    if (java.lang.Boolean.FALSE == result) {
+                        val alarm = chain.getArg(1)
+                        if (alarm != null) {
+                            val uid = field.getInt(alarm)
+                            if (isGmsUid(uid)) {
+                                // One-shot INFO: the only way to tell "the ROM
+                                // actually denies GMS alarms here" apart from
+                                // "the gate is never reached".
+                                if (!alarmGateBypassLogged) {
+                                    alarmGateBypassLogged = true
+                                    log(
+                                        Log.INFO, TAG,
+                                        "checkAlarmIsAllowedSend: re-allowed denied GMS alarm" +
+                                            " (creatorUid=$uid)"
+                                    )
+                                }
+                                return@intercept true
+                            }
+                        }
+                    }
+                } catch (t: Throwable) {
+                    log(Log.ERROR, TAG, "Failed to evaluate alarm gate", t)
+                }
+                try {
+                    // Counterpart of the one-shot above: proves the gate is
+                    // actually reached for GMS alarms when the ROM allows them,
+                    // so a silent log later means "never denied", not "never run".
+                    if (java.lang.Boolean.TRUE == result && !alarmGateSeenLogged) {
+                        val alarm = chain.getArg(1)
+                        if (alarm != null) {
+                            val uid = field.getInt(alarm)
+                            if (isGmsUid(uid)) {
+                                alarmGateSeenLogged = true
+                                log(
+                                    Log.INFO, TAG,
+                                    "checkAlarmIsAllowedSend: GMS alarm allowed by ROM" +
+                                        " (creatorUid=$uid)"
+                                )
+                            }
+                        }
+                    }
+                } catch (t: Throwable) {
+                    log(Log.ERROR, TAG, "Failed to evaluate alarm gate (allow path)", t)
+                }
+                result
+            }
+            deoptimize(method)
+            log(
+                Log.INFO, TAG,
+                "checkAlarmIsAllowedSend hooked on ${method.declaringClass?.simpleName}"
+            )
+        }
+    }
+
+    /**
+     * Gate-W probe (read-only).
+     *
+     * The wake-path chain is the one §7 candidate with a **cross-jar** entry: AOSP
+     * `ActivityManagerService` in services.jar invokes
+     * `ActivityManagerServiceStub#checkRunningCompatibility` from at least five sites,
+     * the override in `ActivityManagerServiceImpl` funnels into `checkServiceWakePath`
+     * and then `checkWakePath`. So unlike the rest of §7 it is definitely reached.
+     *
+     * What is *not* known is whether it ever denies anything involving GMS — and that
+     * is the only question that decides whether a behaviour hook belongs here. This
+     * probe therefore never alters the return value: it observes, counts, and records
+     * the caller package on the first denial. A silent log means "reached but never
+     * denied", which closes the gate negatively.
+     */
+    private fun probeWakePath(classLoader: ClassLoader) {
+        val clazz = try {
+            classLoader.loadClass("com.android.server.am.ActivityManagerServiceImpl")
+        } catch (e: ClassNotFoundException) {
+            logSkipOtherGeneration("ActivityManagerServiceImpl absent, wake-path probe skip")
+            return
+        }
+        val method = clazz.declaredMethods.firstOrNull { m ->
+            m.name == "checkWakePath" &&
+                m.parameterCount == 7 &&
+                m.returnType == Boolean::class.javaPrimitiveType
+        }
+        if (method == null) {
+            logSkipOtherGeneration("checkWakePath absent, wake-path probe skip")
+            return
+        }
+        // Best effort: CallerInfo#callerPkg identifies the waking side. Absent on some
+        // generations, and the probe still works without it (it just logs "?").
+        val callerPkgField: Field? = try {
+            classLoader.loadClass("miui.security.CallerInfo")
+                .getDeclaredField("callerPkg")
+                .also { it.isAccessible = true }
+        } catch (t: Throwable) {
+            null
+        }
+        method.isAccessible = true
+        hookE(method).intercept { chain: XposedInterface.Chain ->
+            val result = chain.proceed()
+            try {
+                // Count every entry so an overnight window is quantitative: a bare
+                // "0 DENIED" says nothing if the gate was never reached.
+                val reached = ++wakePathReachedCount
+                if (java.lang.Boolean.FALSE == result) {
+                    val denied = ++wakePathDeniedCount
+                    if (denied <= 10) {
+                        log(
+                            Log.INFO, TAG,
+                            "wake-path probe: checkWakePath DENIED #$denied " +
+                                "(callerPkg=${readCallerPkg(chain, callerPkgField)})"
+                        )
+                    }
+                } else if (reached % 50 == 1) {
+                    log(
+                        Log.INFO, TAG,
+                        "wake-path probe: heartbeat reached=$reached denied=$wakePathDeniedCount " +
+                            "(callerPkg=${readCallerPkg(chain, callerPkgField)})"
+                    )
+                }
+            } catch (t: Throwable) {
+                log(Log.ERROR, TAG, "Failed to evaluate wake-path probe", t)
+            }
+            result
+        }
+        deoptimize(method)
+        log(Log.INFO, TAG, "wake-path probe: checkWakePath hooked (read-only)")
+    }
+
+    private fun readCallerPkg(chain: XposedInterface.Chain, field: Field?): String {
+        if (field == null) return "?"
+        val info = chain.getArg(1) ?: return "?"
+        return try {
+            field.get(info) as? String ?: "?"
+        } catch (t: Throwable) {
+            "?"
+        }
+    }
+
     private fun skipValueFor(returnType: Class<*>): Any? {
         if (returnType == Void.TYPE || !returnType.isPrimitive) {
             return null
@@ -2005,10 +2620,71 @@ class Hooker : XposedModule() {
     @Volatile
     private var c2dmDeferBypassLogged = false
 
+    /** One-shot: confirms the §5 alarm gate re-allowed a GMS alarm the ROM had denied. */
+    @Volatile
+    private var alarmGateBypassLogged = false
+
+    /** Gate-W: one-shot for the first `checkWakePath` denial, and the first reach. */
+    @Volatile
+    private var wakePathDeniedLogged = false
+
+    @Volatile
+    private var wakePathReachedLogged = false
+
+    /** Gate-W: how many times `checkWakePath` denied anything at all. */
+    @Volatile
+    private var wakePathDeniedCount = 0
+
+    /** Gate-W: how many times `checkWakePath` was entered at all. */
+    @Volatile
+    private var wakePathReachedCount = 0
+
+    /** 3.2 gate: how many times the ROM really asked netd to destroy sockets. */
+    @Volatile
+    private var socketTeardownCount = 0
+
+    /** One-shot: confirms P0 #1 actually suppressed a network restriction for GMS. */
+    @Volatile
+    private var gmsRestrictNetLogged = false
+
+    /** One-shot: confirms 3.6 actually kept the UDP packet filter off GMS. */
+    @Volatile
+    private var gmsUdpFilterLogged = false
+
+    /** One-shot: confirms the §5 alarm gate is actually reached for GMS alarms. */
+    @Volatile
+    private var alarmGateSeenLogged = false
+
     /** Guards userTable write-back against re-entry via hooked config writers. */
     @Volatile
     private var userTableReassertInFlight = false
 
+    /**
+     * `InternationalPolicyManager#isPushApp` — kept as is, and deliberately
+     * **not** mirrored with an International partner for P0 #1.
+     *
+     * Forensics (HyperOS V816), re-confirmed before this hook was left in place:
+     *
+     * - `com.miui.server.greeze.PolicyManager` is the interface both policy
+     *   implementations satisfy, and its method table declares `isRestrictNet`
+     *   **only** — there is no `isPushApp` slot. So no `invoke-interface` edge
+     *   into this method exists anywhere in system_server; its sole callers are
+     *   in-class `invoke-direct` self-calls inside `InternationalPolicyManager`.
+     * - This device selects the Domestic implementation
+     *   (`AurogonImmobulusMode#restorePolicyManager`; `dumpsys greezer` reports
+     *   `mCurrentCNPolicy: 1` with the force-CN flag false), so
+     *   `InternationalPolicyManager` is never instantiated here and this hook
+     *   is inert locally.
+     *
+     * Two consequences follow, and both are intentional:
+     *
+     * - No International counterpart for the P0 #1
+     *   `DomesticPolicyManager#isRestrictNet` hook is added. Nothing on this
+     *   device can execute it, so its behaviour could never be observed —
+     *   unverifiable risk in exchange for zero local benefit.
+     * - This hook stays. International ROMs do instantiate the class, and there
+     *   `isRestrictNet` still funnels through `isPushApp`.
+     */
     private fun hookInternationalPolicyManager(classLoader: ClassLoader) {
         val InternationalPolicyManagerClass =
             classLoader.loadClass("com.miui.server.greeze.InternationalPolicyManager")
@@ -2155,6 +2831,15 @@ class Hooker : XposedModule() {
             "com.google.firebase.iid.FirebaseInstanceIdReceiver"
         private const val GMS_PACKAGE_NAME = "com.google.android.gms"
         private const val GMS_PERSISTENT_PROCESS_NAME = "com.google.android.gms.persistent"
+
+        /**
+         * §5 alarm gate: the Impl overrides the Stub, so the Impl is the live
+         * target; the base type is kept as fallback for ROMs that never split it.
+         */
+        private val ALARM_GATE_CLASS_NAMES = listOf(
+            "com.android.server.alarm.AlarmManagerServiceStubImpl",
+            "com.android.server.alarm.AlarmManagerServiceStub"
+        )
         private const val MILLET_NO_RESTRICT_APP_KEY = "MILLET_NO_RESTRICT_APP"
 
         /** PowerKeeper user config table: source row for bgControl. */

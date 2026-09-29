@@ -58,10 +58,11 @@
 | 自启动判定 | `checkApplicationAutoStart` | 按白名单放行 |
 | 应用已被冻结 | `isRestrictReceiver`（greeze 广播门） | 放行并复现原生解冻 |
 | 广播被延后 | `isNeedCachedBroadcast`、`deferBroadcast` | 见[已知边界](#九已知边界) |
-| 省电/网络限制 | PowerKeeper 场景、AppStandby、网络限制 | 为 GMS 写入不限制名单；投递时为应用申请约 2 秒豁免 |
+| 闹钟被拦下 | `checkAlarmIsAllowedSend`（MIUI 闹钟送达门控） | 属于 GMS 的闹钟在被判为不放行时改为放行 |
+| 省电/网络限制 | PowerKeeper 场景、AppStandby、greeze 的 `isRestrictNet`、网络限制 | 为 GMS 写入不限制名单；投递时为应用申请约 2 秒豁免 |
 | 强停 | `isForceStopEnable` | 严格模式下只对勾选的应用（且声明了 FCM 组件）生效 |
 
-被 hook 的系统服务包括 `ActivityManagerService`、greeze（`GreezeManagerService`）、PowerKeeper 的 `AppStandbyController` 与 `AurogonImmobulusMode`、策略管理器（`DomesticPolicyManager` / `InternationalPolicyManager`）、进程策略表等
+被 hook 的系统服务包括 `ActivityManagerService`、闹钟送达门控（`AlarmManagerServiceStubImpl`）、greeze（`GreezeManagerService`、`AurogonImmobulusMode`、策略管理器 `DomesticPolicyManager` / `InternationalPolicyManager`）、PowerKeeper 的 `AppStandbyController`、进程策略表等
 
 **兼容性**：两种 PowerKeeper 设计均已适配，模块在运行时按方法是否存在自动选择，无需手动切换
 
@@ -220,6 +221,7 @@ GMS 与推送重连始终受保护；若再打开「严格模式」，未勾选�
 - **严格模式的三处收权中，「免网络限制」一项依赖国际版策略实现**。实测 HyperOS V816 走的是国内版策略（该分支不参与运行），因此在这类 ROM 上严格模式实际收权两处：允许推送广播送达、防止被强停
 - **GMS 的保护有一部分以整机策略表的形式写入**（省电场景、进程白名单、不限制名单、睡眠白名单），对整台设备生效，勾选与严格模式都不会把它们收窄
 - **目标应用本身不在免冻集合内**。被推送拉起后进入缓存进程、之后被回收或冻结属正常，不影响下次推送
+- **闹钟门控只在 ROM 判定不放行时才介入**。实测该门控确实会读到 GMS 的闹钟，但测试机上未观测到 ROM 拒绝 GMS 闹钟的情形 —— 正常状态下这条改动不改变行为，只在 ROM 拦下 GMS 闹钟（重连、心跳）时才起作用
 - **模块不具备保活能力**。它不阻止系统回收应用进程，也不持有任何后台常驻
 
 ---

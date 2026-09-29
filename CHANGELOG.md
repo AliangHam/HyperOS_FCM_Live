@@ -1,5 +1,25 @@
 # Changelog
 
+## 3.4.0
+
+🚀 推送修复
+
+- 补上 greeze 的**国内版**网络限制分支：原先只覆盖国际版策略实现，而 HyperOS V816 实测走的是国内版（该实现没有 `isPushApp`，旧钩子在这类 ROM 上从未执行），帮助文档里承诺的「推送免网络限制」等于没有落地。现 `DomesticPolicyManager#isRestrictNet` 遇到 GMS 时强制判定为「不限制」
+- 新增 greeze 的 UDP 包过滤路径 `GreezeManagerService#udpPackageRestrict`：这是八轮取证里一直被漏掉的一条**国内版同样会走**的真实分支（还会继续调用 `PowerInsightService#setUidNetworkFilter`），对 GMS 直接跳过
+- 新增 MIUI 闹钟送达门控 `AlarmManagerServiceStubImpl#checkAlarmIsAllowedSend`：属于 GMS 的闹钟被判为不放行时改为放行（GMS 的重连与心跳依赖它）
+
+> 以上三项都是**防御位**：测试机上 ROM 尚未对 GMS 真正判过「限制」或「拒绝」（闹钟门控确实读到过 GMS 的闹钟，但 ROM 予以放行），正常情况下不改变行为，只在 ROM 真的要拦时才起作用
+
+🔍 诊断
+
+- 新增一批**只读探针**（只观察、不改写任何返回值）：免限网名单 `mMessageApp`、`checkWakePath` 到达次数、睡眠模式反射跳板是否存在、包过滤能力、`doDesSocketForUid` 三层链路。用于把「静态查不到」的 ROM 行为放到真机上读出来，也是后续判断要不要补钩子的依据
+
+✨ 界面与文案
+
+- 「检查更新」下方的版本号不再写死，改为运行时读取（此前一直显示 2.6.0）
+- 修正一条与实际行为相反的日志：热重载原本建议重启，实测重载打完这条后几十毫秒内整组钩子就已重挂完毕，现改为如实说明
+- HELP.md 同步更新：补充闹钟门控一行、写明严格模式「免网络限制」一项依赖国际版策略带来的实际收权差异
+
 ## 3.2.0
 
 🚀 推送修复

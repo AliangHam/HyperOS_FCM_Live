@@ -24,6 +24,7 @@ import android.os.Bundle
 import android.os.Process
 import android.os.SystemClock
 import android.text.TextUtils
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -137,6 +138,7 @@ class AboutActivity : AppCompatActivity() {
         bindRow(R.id.row_export_allowlist, this::exportAllowlist)
         bindRow(R.id.row_import_allowlist, this::importAllowlist)
         bindRow(R.id.row_check_update, this::checkForUpdates)
+        bindCurrentVersion()
 
         hideIconState = findViewById(R.id.about_hide_icon_state)
         themeModeValue = findViewById(R.id.about_theme_mode_value)
@@ -168,6 +170,26 @@ class AboutActivity : AppCompatActivity() {
         )
 
         showUpdateBadge(UpdateChecker.isUpdateAvailable(this))
+    }
+
+    /**
+     * The "check for updates" row used to carry a literal version number in its
+     * subtitle, so every release left it showing the version before last. It is
+     * bound from PackageManager here — the same source the update check itself
+     * compares against — so it cannot drift again.
+     */
+    private fun bindCurrentVersion() {
+        val label = findViewById<TextView>(R.id.about_check_update_state) ?: return
+        val info = try {
+            packageManager.getPackageInfo(packageName, 0)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Cannot read own package info", t)
+            null
+        }
+        val name = info?.versionName ?: return
+        label.text = getString(
+            R.string.about_sub_check_update, name, info.longVersionCode
+        )
     }
 
     private fun checkForUpdates() {
@@ -1129,6 +1151,8 @@ class AboutActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val TAG = "AboutActivity"
+
         private const val REPO_URL = "https://github.com/iamqwert/HyperOS_FCM_Live"
 
         /**
