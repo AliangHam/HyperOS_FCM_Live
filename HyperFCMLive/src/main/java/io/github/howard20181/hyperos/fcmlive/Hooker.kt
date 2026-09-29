@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.PowerExemptionManager
+import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import android.util.Pair
@@ -179,7 +180,7 @@ class Hooker : XposedModule() {
                 log(Log.ERROR, TAG, "Failed to hook GmsObserver", t)
             }
             try {
-                hookAppStandbyUidState(classLoader)
+                hookAppStandbyUidState(packageName, classLoader)
             } catch (t: Throwable) {
                 log(Log.ERROR, TAG, "Failed to hook AppStandbyController", t)
             }
@@ -1057,7 +1058,7 @@ class Hooker : XposedModule() {
      * a uid restriction, and it only fires on sleep-mode exit or a
      * MILLET_NO_RESTRICT_APP repair, neither of which recurs on its own.
      */
-    private fun hookAppStandbyUidState(classLoader: ClassLoader) {
+    private fun hookAppStandbyUidState(packageName: String, classLoader: ClassLoader) {
         try {
             val appStandbyControllerClass =
                 classLoader.loadClass("com.miui.powerkeeper.controller.AppStandbyController")
@@ -1081,7 +1082,15 @@ class Hooker : XposedModule() {
                     chain.proceed(args)
                 }
                 deoptimize(setUidStateMethod)
-                log(Log.INFO, TAG, "AppStandbyController#setUidState hooked for GMS allow re-assert")
+                // Tag the log with pkg/userId: this line repeats once per
+                // package-ready pass (every hot reload re-runs it), so a raw
+                // count reads like several hooks when setId() has in fact
+                // collapsed them into a single live one.
+                log(
+                    Log.INFO, TAG,
+                    "AppStandbyController#setUidState hooked for GMS allow re-assert" +
+                        " (pkg=$packageName, userId=${Process.myUid() / 100000})"
+                )
             } catch (e: NoSuchMethodException) {
                 logSkip("AppStandbyController#setUidState absent, skip")
             }
