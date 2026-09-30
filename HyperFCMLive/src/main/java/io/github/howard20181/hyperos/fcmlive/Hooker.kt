@@ -21,7 +21,6 @@ import android.os.SystemClock
 import android.util.Log
 import android.util.Pair
 import androidx.annotation.RequiresApi
-import java.io.File
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
@@ -195,9 +194,9 @@ class Hooker : XposedModule() {
             log(Log.ERROR, TAG, "Failed to install socket-teardown probe", t)
         }
         try {
-            startFcmSocketProbe()
+            startGmsTrafficProbe()
         } catch (t: Throwable) {
-            log(Log.ERROR, TAG, "Failed to start FCM socket probe", t)
+            log(Log.ERROR, TAG, "Failed to start GMS traffic probe", t)
         }
     }
 
@@ -1228,11 +1227,11 @@ class Hooker : XposedModule() {
                     // Sample before the nudge: those broadcasts make GMS drop its
                     // current MCS connection, so the pre-nudge state is what tells
                     // us whether the nudge broke a connection that was still alive.
-                    probeFcmSocket("before sleep-exit nudge")
+                    probeGmsTraffic("before sleep-exit nudge")
                     Thread { recoverGmsConnection(context) }.start()
                     probeBackgroundHandler().postDelayed(
-                        { probeFcmSocket("after sleep-exit nudge") },
-                        FCM_SOCKET_NUDGE_RESAMPLE_MS
+                        { probeGmsTraffic("after sleep-exit nudge") },
+                        GMS_TRAFFIC_NUDGE_RESAMPLE_MS
                     )
                 }
             }
@@ -2573,118 +2572,59 @@ class Hooker : XposedModule() {
     }
 
     /**
-     * Gate-W probe (read-only).
+     * Read-only probe: is GMS still exchanging traffic?
      *
-     * The wake-path chain is the one §7 candidate with a **cross-jar** entry: AOSP
-     * `ActivityManagerService` in services.jar invokes
-     * `ActivityManagerServiceStub#checkRunningCompatibility` from at least five sites,
-     * the override in `ActivityManagerServiceImpl` funnels into `checkServiceWakePath`
-     * and then `checkWakePath`. So unlike the rest of §7 it is definitely reached.
+     * Hooks record which gates the ROM opened; they say nothing about the outcome,
+     * and the outcome is what decides whether the sleep-exit nudge is warranted at
+     * all. The only connection observable reachable from the system_server domain
+     * is the per-uid byte counter, so that is what this samples.
      *
-     * What is *not* known is whether it ever denies anything involving GMS — and that
-     * is the only question that decides whether a behaviour hook belongs here. This
-     * probe therefore never alters the return value: it observes, counts, and records
-     * the caller package on the first denial. A silent log means "reached but never
-     * denied", which closes the gate negatively.
+     * A /proc/net/tcp pass (looking for an ESTABLISHED MCS socket) was implemented
+     * and then removed. Two reasons, either one fatal on its own:
+     *   - It is unreadable from the system_server SELinux domain: the file is
+     *     labelled proc_net_tcp_udp and Enforcing gives system_server no read on
+     *     it (adb's shell domain does — adb being able to read it proves nothing
+     *     about what a hook can read). Android has also been closing /proc/net off
+     *     since 10 for side-channel reasons, and every device this module targets
+     *     runs far newer than that, so "it may be readable on other builds" was
+     *     never a real possibility. Making it readable would mean loosening
+     *     SELinux, which is off the table.
+     *   - Even granted the permission it would answer the wrong question. The two
+     *     ways this ROM actually starves GMS are DNS interception and firewall
+     *     DROP; neither notifies the endpoint, so the socket stays ESTABLISHED
+     *     and the table reports a healthy connection over a dead one. The one
+     *     path that genuinely closes sockets, closeSocketForAurogon, has a
+     *     measured hit rate of zero for GMS on this ROM.
      */
-    private fun startFcmSocketProbe() {
-        probeBackgroundHandler().post { probeFcmSocket("startup") }
+    private fun startGmsTrafficProbe() {
+        probeBackgroundHandler().post { probeGmsTraffic("startup") }
         probeBackgroundHandler().postDelayed(object : Runnable {
             override fun run() {
-                probeFcmSocket("periodic")
-                probeBackgroundHandler().postDelayed(this, FCM_SOCKET_PROBE_INTERVAL_MS)
+                probeGmsTraffic("periodic")
+                probeBackgroundHandler().postDelayed(this, GMS_TRAFFIC_PROBE_INTERVAL_MS)
             }
-        }, FCM_SOCKET_PROBE_INTERVAL_MS)
+        }, GMS_TRAFFIC_PROBE_INTERVAL_MS)
         log(
             Log.INFO, TAG,
-            "fcm socket probe: scheduled every ${FCM_SOCKET_PROBE_INTERVAL_MS / 60_000} min (read-only)"
+            "gms traffic probe: scheduled every ${GMS_TRAFFIC_PROBE_INTERVAL_MS / 60_000} min (read-only)"
         )
     }
 
-    /**
-     * Read-only probe: is GMS's MCS connection actually alive?
-     *
-     * The hooks record which gates the ROM opened; they say nothing about the
-     * outcome. Ground truth would be an ESTABLISHED socket owned by the GMS uid,
-     * and the per-uid byte counters are the fallback when the socket table is
-     * unreadable. Either way this is what turns "the sleep-exit nudge is
-     * probably unnecessary" into a measurement.
-     *
-     * Ports are reported rather than filtered: GMS falls back to 443 when
-     * 5228-5230 are unreachable, so hard-coding the MCS range would declare a
-     * live connection dead.
-     */
-    private fun probeFcmSocket(reason: String) {
+    private fun probeGmsTraffic(reason: String) {
         val uid = gmsUid()
         if (uid == null) {
-            log(Log.INFO, TAG, "fcm socket probe [$reason]: GMS uid unresolved, skip")
+            log(Log.INFO, TAG, "gms traffic probe [$reason]: GMS uid unresolved, skip")
             return
-        }
-        val sockets = readGmsSockets(uid)
-        val socketPart = if (sockets == null) {
-            "sockets=unavailable"
-        } else {
-            val ports = sockets.values.distinct().sorted()
-            val mcs = ports.count { FCM_MCS_PORTS.contains(it) }
-            val shown = sockets.keys.take(FCM_SOCKET_PEER_LIMIT)
-            val overflow = if (sockets.size > shown.size) {
-                ", +${sockets.size - shown.size} more"
-            } else {
-                ""
-            }
-            "sockets=${sockets.size} ports=$ports mcs=$mcs peers=$shown$overflow"
         }
         log(
             Log.INFO, TAG,
-            "fcm socket probe [$reason]: uid=$uid $socketPart ${trafficSinceLastProbe(uid)}"
+            "gms traffic probe [$reason]: uid=$uid ${trafficSinceLastProbe(uid)}"
         )
     }
 
     /**
-     * Returns null when the socket table cannot be read at all.
-     *
-     * /proc/net/tcp is labelled proc_net_tcp_udp and, under Enforcing SELinux,
-     * the system_server domain has no read permission for it (verified: adb's
-     * shell domain does, system_server gets EACCES). That is a ROM property, not
-     * a bug, so it is reported once and then falls back to the byte counters
-     * instead of logging an error on every sample.
-     */
-    private fun readGmsSockets(uid: Int): LinkedHashMap<String, Int>? {
-        val peers = LinkedHashMap<String, Int>()
-        var opened = false
-        for (path in FCM_SOCKET_TABLES) {
-            val lines = try {
-                File(path).readLines()
-            } catch (t: Throwable) {
-                if (socketTableBlockedReason == null) {
-                    socketTableBlockedReason = t.message ?: t.javaClass.simpleName
-                    log(
-                        Log.WARN, TAG,
-                        "fcm socket probe: $path unreadable ($socketTableBlockedReason), " +
-                            "falling back to per-uid traffic counters"
-                    )
-                }
-                continue
-            }
-            opened = true
-            for (line in lines) {
-                val f = line.trim().split(WHITESPACE)
-                // sl local rem st tx:rx tr:tm->when retrnsmt uid timeout inode
-                if (f.size < 9 || f[3] != TCP_ESTABLISHED || f[7] != uid.toString()) {
-                    continue
-                }
-                val port = f[2].substringAfterLast(':').toIntOrNull(16) ?: continue
-                val host = decodeEndpointIp(f[2].substringBeforeLast(':'))
-                peers["$host:$port"] = port
-            }
-        }
-        return if (opened) peers else null
-    }
-
-    /**
-     * Byte counters survive where the socket table does not: a growing counter
-     * means GMS is still exchanging traffic, which is the observable we actually
-     * need when deciding whether the nudge was warranted.
+     * A growing counter means GMS is still exchanging traffic, which is the
+     * observable we actually need when deciding whether the nudge was warranted.
      */
     private fun trafficSinceLastProbe(uid: Int): String {
         val rx = TrafficStats.getUidRxBytes(uid)
@@ -2702,28 +2642,6 @@ class Hooker : XposedModule() {
         return "rx=+${rx - prevRx}B tx=+${tx - prevTx}B"
     }
 
-    /**
-     * /proc/net prints each 32-bit word little-endian, so the byte order inside
-     * every 8-hex group is reversed. GMS reaches Google over IPv4-mapped IPv6,
-     * which is printed as a full 32-hex field; recognising it keeps the log
-     * readable instead of dumping 32 hex digits per connection.
-     */
-    private fun decodeEndpointIp(hex: String): String {
-        fun wordToIpv4(w: String): String {
-            val b = (0..3).map { w.substring(it * 2, it * 2 + 2).toIntOrNull(16) ?: 0 }
-            return "${b[3]}.${b[2]}.${b[1]}.${b[0]}"
-        }
-        return when (hex.length) {
-            8 -> wordToIpv4(hex)
-            32 -> if (hex.startsWith(IPV4_MAPPED_PREFIX)) {
-                wordToIpv4(hex.substring(24))
-            } else {
-                "ipv6:$hex"
-            }
-            else -> hex
-        }
-    }
-
     @Volatile
     private var probeHandler: Handler? = null
 
@@ -2732,10 +2650,6 @@ class Hooker : XposedModule() {
     private var lastGmsRxBytes = -1L
     @Volatile
     private var lastGmsTxBytes = -1L
-
-    /** Set once the socket table turns out to be unreadable, to avoid log spam. */
-    @Volatile
-    private var socketTableBlockedReason: String? = null
 
     private fun probeBackgroundHandler(): Handler {
         val handler = probeHandler
@@ -2752,6 +2666,21 @@ class Hooker : XposedModule() {
         }
     }
 
+    /**
+     * Gate-W probe (read-only).
+     *
+     * The wake-path chain is the one §7 candidate with a **cross-jar** entry: AOSP
+     * `ActivityManagerService` in services.jar invokes
+     * `ActivityManagerServiceStub#checkRunningCompatibility` from at least five sites,
+     * the override in `ActivityManagerServiceImpl` funnels into `checkServiceWakePath`
+     * and then `checkWakePath`. So unlike the rest of §7 it is definitely reached.
+     *
+     * What is *not* known is whether it ever denies anything involving GMS — and that
+     * is the only question that decides whether a behaviour hook belongs here. This
+     * probe therefore never alters the return value: it observes, counts, and records
+     * the caller package on the first denial. A silent log means "reached but never
+     * denied", which closes the gate negatively.
+     */
     private fun probeWakePath(classLoader: ClassLoader) {
         val clazz = try {
             classLoader.loadClass("com.android.server.am.ActivityManagerServiceImpl")
@@ -3069,13 +2998,8 @@ class Hooker : XposedModule() {
         private const val GMS_PACKAGE_NAME = "com.google.android.gms"
         private const val GMS_PERSISTENT_PROCESS_NAME = "com.google.android.gms.persistent"
 
-        /** MCS socket probe: /proc/net row state meaning ESTABLISHED. */
-        private const val TCP_ESTABLISHED = "01"
-        private val FCM_SOCKET_TABLES = arrayOf("/proc/net/tcp", "/proc/net/tcp6")
-        private val FCM_MCS_PORTS = intArrayOf(5228, 5229, 5230)
-        private const val FCM_SOCKET_PEER_LIMIT = 4
-        private const val FCM_SOCKET_PROBE_INTERVAL_MS = 30 * 60_000L
-        private const val FCM_SOCKET_NUDGE_RESAMPLE_MS = 15_000L
+        private const val GMS_TRAFFIC_PROBE_INTERVAL_MS = 30 * 60_000L
+        private const val GMS_TRAFFIC_NUDGE_RESAMPLE_MS = 15_000L
 
         /**
          * Gate-W heartbeat floor. The gate is reached thousands of times a night,
@@ -3084,8 +3008,6 @@ class Hooker : XposedModule() {
          * the volume by roughly an order of magnitude.
          */
         private const val WAKE_PATH_HEARTBEAT_MIN_MS = 30 * 60_000L
-        private const val IPV4_MAPPED_PREFIX = "0000000000000000FFFF0000"
-        private val WHITESPACE = Regex("\\s+")
 
         /**
          * §5 alarm gate: the Impl overrides the Stub, so the Impl is the live
