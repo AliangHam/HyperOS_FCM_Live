@@ -1203,6 +1203,16 @@ class Hooker : XposedModule() {
         chainMethod.isAccessible = true
         hookE(chainMethod).intercept { chain: XposedInterface.Chain ->
             val enabling = chain.getArg(0) == true
+            if (enabling) {
+                // Entering sleep used to be silent, which made "the callback never
+                // ran" and "it ran but the whitelist was empty" look identical in
+                // the logs. Record it, plus the size we are about to iterate over.
+                log(
+                    Log.INFO, TAG,
+                    "Sleep mode entering: chain enabled, whitelist size " +
+                        sleepModeWhitelistSize(whitelistField, chain.thisObject)
+                )
+            }
             chain.proceed()
             if (!enabling) {
                 log(Log.INFO, TAG, "Sleep mode exited: network restored, nudging GMS to reconnect")
@@ -1223,16 +1233,48 @@ class Hooker : XposedModule() {
     private fun addGmsToSleepModeWhitelist(whitelistField: Field, owner: Any) {
         val raw = whitelistField.get(owner)
         if (raw !is MutableCollection<*>) {
+            log(
+                Log.WARN, TAG,
+                "Sleep mode entering: whitelist field is ${raw?.javaClass?.name ?: "null"}, " +
+                    "not a mutable collection, GMS not added"
+            )
             return
         }
         @Suppress("UNCHECKED_CAST")
         val whitelist = raw as MutableCollection<Any?>
-        val uid = gmsUid() ?: return
+        val uid = gmsUid()
+        if (uid == null) {
+            log(
+                Log.WARN, TAG,
+                "Sleep mode entering: GMS uid unresolved, GMS not added"
+            )
+            return
+        }
         if (whitelist.add(uid)) {
             log(
                 Log.INFO, TAG,
                 "Sleep mode entering: kept GMS (uid $uid) on the network whitelist"
             )
+        } else {
+            // Already present: either the ROM populated the set itself (which the
+            // static analysis says it never does) or a previous pass left it there.
+            log(
+                Log.INFO, TAG,
+                "Sleep mode entering: GMS (uid $uid) already whitelisted, size ${whitelist.size}"
+            )
+        }
+    }
+
+    /**
+     * Read-only size of the sleep-mode whitelist, for diagnostics only.
+     * Never throws: this runs inside a hook callback in system_server.
+     */
+    private fun sleepModeWhitelistSize(whitelistField: Field, owner: Any?): String {
+        return try {
+            val raw = whitelistField.get(owner)
+            if (raw is Collection<*>) raw.size.toString() else "<not a collection>"
+        } catch (t: Throwable) {
+            "<unreadable>"
         }
     }
 
