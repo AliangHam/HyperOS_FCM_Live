@@ -48,16 +48,15 @@ jobs:
       - name: Build with Gradle
         # 没有配签名 secret 时显式声明「允许 debug 签名」，否则发布构建会直接失败
         # （避免产出一个用公开 debug 密钥签名的正式包）。
-        # Release 和 Debug 分开编，避免 Compose + R8 把 runner 堆挤爆。
+        # 只编 Release：本模块的 release 包默认就是 debug 签名，可直接装机，
+        # 单独的 Debug 变体（未混淆、体积更大）没有分发价值。
         run: |
           export GRADLE_OPTS="-Xmx4g"
           if [ -z "${{ secrets.SIGNING_KEY }}" ]; then
             echo "::warning::未配置 SIGNING_KEY，本次产物使用 debug 签名，仅适合内部测试"
             ./gradlew --no-daemon -PallowDebugSignedRelease :HyperFCMLive:assembleRelease
-            ./gradlew --no-daemon -PallowDebugSignedRelease :HyperFCMLive:assembleDebug
           else
             ./gradlew --no-daemon :HyperFCMLive:assembleRelease
-            ./gradlew --no-daemon :HyperFCMLive:assembleDebug
           fi
 
       - name: Upload release artifact
@@ -65,14 +64,6 @@ jobs:
         with:
           name: hyperos-fcm-live-release
           path: HyperFCMLive/build/outputs/apk/release/*.apk
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload debug artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: hyperos-fcm-live-debug
-          path: HyperFCMLive/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -99,12 +90,6 @@ jobs:
           name: hyperos-fcm-live-release
           path: release
 
-      - name: Download debug APK
-        uses: actions/download-artifact@v8
-        with:
-          name: hyperos-fcm-live-debug
-          path: debug
-
       - name: Resolve version from APK name
         id: ver
         run: |
@@ -129,15 +114,7 @@ jobs:
             echo "::warning::CHANGELOG.md 中没有找到 $name 的小节，已使用占位文本"
           fi
           {
-            echo "## 更新内容 / Changelog"
-            echo
             cat section.md
-            echo
-            echo "## 发布与版本"
-            echo "- \`versionName\`：\`$version\`（tag \`v$version\`）"
-            echo "- 正式 Release（非 nightly），同时提供 **release** 与 **debug** 两个 APK。"
-            echo "- Release APK：R8 混淆；配置 GitHub Secrets 后使用发布签名。"
-            echo
             if [ -f .github/release-notes.md ]; then cat .github/release-notes.md; fi
           } > body.md
 
@@ -152,5 +129,4 @@ jobs:
           body_path: body.md
           files: |
             release/*.apk
-            debug/*.apk
           fail_on_unmatched_files: true
