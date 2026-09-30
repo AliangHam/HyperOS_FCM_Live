@@ -52,6 +52,8 @@ import io.github.howard20181.hyperos.fcmlive.theme.AppPalette
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeEngine
 import io.github.howard20181.hyperos.fcmlive.theme.ThemePrefs
 import io.github.howard20181.hyperos.fcmlive.theme.ThemeSupport
+import io.github.howard20181.hyperos.fcmlive.theme.applyPalette
+import io.github.howard20181.hyperos.fcmlive.UiUtils.rowClick
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -1238,20 +1240,6 @@ class AboutActivity : AppCompatActivity() {
             return if (value < min) min else Math.min(value, max)
         }
 
-        /**
-         * A card tap: one tick of haptic feedback, then whatever the row does.
-         *
-         * Only the list cards get it — not the version row (it is deliberately
-         * inert, and a buzz on every tap would give the easter egg away) and not
-         * the open-source licenses screen.
-         */
-        private fun rowClick(action: Runnable): View.OnClickListener {
-            return View.OnClickListener { v ->
-                UiUtils.tapFeedback(v)
-                action.run()
-            }
-        }
-
         private fun variantAt(index: Int): Scheme.Variant {
             val values = Scheme.Variant.values()
             return if (index >= 0 && index < values.size) values[index] else Scheme.Variant.TONAL_SPOT
@@ -1261,18 +1249,6 @@ class AboutActivity : AppCompatActivity() {
         private fun naturalHeight(rowH: Int, itemGap: Int, outer: Int, count: Int): Int {
             return rowH * count + itemGap * Math.max(0, count - 1) + outer * 2
         }
-    }
-
-    /** Tint MaterialSwitch from the runtime AppPalette (custom seeds / AMOLED). */
-    private fun MaterialSwitch.applyPalette(palette: AppPalette) {
-        thumbTintList = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(palette.onPrimary, palette.outline)
-        )
-        trackTintList = ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(palette.primary, palette.surfaceVariant)
-        )
     }
 
 }

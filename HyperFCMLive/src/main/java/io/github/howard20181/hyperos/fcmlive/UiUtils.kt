@@ -80,6 +80,21 @@ object UiUtils {
         }
     }
 
+    /**
+     * A card tap: one tick of haptic feedback, then whatever the row does.
+     *
+     * Shared by every screen with list cards so the feedback stays identical
+     * across them. Deliberately inert rows (a version row carrying an easter
+     * egg, for instance) skip it — a buzz on every tap would give them away.
+     */
+    @JvmStatic
+    fun rowClick(action: Runnable): View.OnClickListener {
+        return View.OnClickListener { v ->
+            tapFeedback(v)
+            action.run()
+        }
+    }
+
     @JvmStatic
     fun statusBarHeight(context: Context): Int {
         val id = context.resources.getIdentifier("status_bar_height", "dimen", "android")
